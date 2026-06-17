@@ -9,9 +9,11 @@
 </head>
 <body>
 <h1>Pi Kids Math</h1>
-<div id="user-info">Lade...</div>
+<div id="user-info">Bitte einloggen</div>
+<button onclick="signIn()">Mit Pi einloggen</button>
 
 <script>
+function signIn() {
 Pi.authenticate(["username"], function(payment) {})
 .then(function(auth) {
 document.getElementById("user-info").innerText =
@@ -21,6 +23,7 @@ document.getElementById("user-info").innerText =
 document.getElementById("user-info").innerText =
 "Fehler: " + err.message;
 });
+}
 </script>
 </body>
 </html>
