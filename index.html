@@ -4,30 +4,27 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pi Lernen</title>
-<script src="https://sdk.minepi.com/pi-sdk.js"></script>
 </head>
 <body>
 <h1>Pi Kids Math</h1>
 <div id="user-info">Lade...</div>
 
 <script>
-window.addEventListener('load', function() {
+var script = document.createElement('script');
+script.src = 'https://sdk.minepi.com/pi-sdk.js';
+script.onload = function() {
 Pi.init({ version: "2.0", sandbox: true });
-
-Pi.authenticate(["username"], onIncompletePaymentFound)
+Pi.authenticate(["username"], function(payment) {})
 .then(function(auth) {
 document.getElementById("user-info").innerText =
 "Eingeloggt als: " + auth.user.username;
 })
 .catch(function(err) {
 document.getElementById("user-info").innerText =
-"Fehler: " + JSON.stringify(err) + " | " + err.message + " | " + err.type;
+"Fehler: " + err.message;
 });
-
-function onIncompletePaymentFound(payment) {
-console.log("Incomplete payment found", payment);
-}
-});
+};
+document.head.appendChild(script);
 </script>
 </body>
 </html>
