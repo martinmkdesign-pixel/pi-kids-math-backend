@@ -1,12 +1,13 @@
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
-
+const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
-const PI_API_KEY = process.env.PI_API_KEY || 'qpajxlt4hrhsyboirfu5e5b1vxze3nn37ci5cr6lfmhccpi9vuggdckg1aunuayy';
+const PI_API_KEY = process.env.PI_API_KEY;
 
 app.use(express.json());
+app.use(express.static(path.join(_dirname)));
 app.use(cors({
 origin: ['https://golden-cobbler-2dc822.netlify.app', 'https://sandbox.minepi.com'],
 methods: ['GET', 'POST'],
