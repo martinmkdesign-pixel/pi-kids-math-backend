@@ -11,16 +11,21 @@
 <div id="user-info">Lade...</div>
 
 <script>
-const BACKEND = "https://marvelous-wisdom-production-1860.up.railway.app";
+Pi.init({ version: "2.0", sandbox: false });
 
-Pi.init({ version: "2.0", sandbox: true });
-
-Pi.authenticate(["username"], function(auth) {
+Pi.authenticate(["username"], onIncompletePaymentFound)
+.then(function(auth) {
 document.getElementById("user-info").innerText =
 "Eingeloggt als: " + auth.user.username;
-}, function(err) {
-document.getElementById("user-info").innerText = "Fehler: " + err;
+})
+.catch(function(err) {
+document.getElementById("user-info").innerText =
+"Fehler: " + JSON.stringify(err);
 });
+
+function onIncompletePaymentFound(payment) {
+console.log("Incomplete payment found", payment);
+}
 </script>
 </body>
 </html>
