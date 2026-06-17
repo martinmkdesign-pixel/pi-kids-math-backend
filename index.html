@@ -20,7 +20,7 @@ document.getElementById("user-info").innerText =
 })
 .catch(function(err) {
 document.getElementById("user-info").innerText =
-"Fehler: " + JSON.stringify(err);
+"Fehler: " + JSON.stringify(err) + " | " + err.message + " | " + err.type;
 });
 
 function onIncompletePaymentFound(payment) {
