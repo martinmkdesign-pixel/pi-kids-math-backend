@@ -1,29 +1,502 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pi Lernen</title>
-<script src="https://sdk.minepi.com/pi-sdk.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Pi Lernen – Mathe für Kinder</title> 
+  <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 <script>Pi.init({ version: "2.0", sandbox: true })</script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; font-family: -apple-system, 'Segoe UI', sans-serif; }
+    body { background: linear-gradient(160deg, #EEF2FF 0%, #FEF9C3 60%, #F0FDF4 100%); min-height: 100vh; }
+    #app { display: flex; flex-direction: column; align-items: center; padding: 16px; gap: 14px; min-height: 100vh; }
+    .card { width: 100%; max-width: 460px; background: #fff; border-radius: 24px; padding: 22px 18px; box-shadow: 0 4px 24px rgba(0,0,0,0.09); display: flex; flex-direction: column; gap: 12px; }
+    h1 { font-size: 30px; font-weight: 900; color: #1E1B4B; text-align: center; letter-spacing: -1px; }
+    .sub { text-align: center; color: #64748B; font-size: 15px; }
+    .pill { background: #EEF2FF; color: #4F46E5; padding: 5px 12px; border-radius: 99px; font-size: 13px; font-weight: 700; display: inline-block; }
+    .pills { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; }
+    button { cursor: pointer; border: none; font-family: inherit; font-size: 16px; }
+    .btn-pi    { background: #6366F1; color: #fff; border-radius: 16px; padding: 14px; font-size: 17px; font-weight: 800; width: 100%; }
+    .btn-green { background: #10B981; color: #fff; border-radius: 16px; padding: 14px; font-size: 17px; font-weight: 800; width: 100%; }
+    .btn-back  { background: none; color: #6366F1; font-size: 14px; font-weight: 700; padding: 6px 10px; min-width: 80px; min-height: 40px; }
+    .btn-purple{ background: #7C3AED; color: #fff; border-radius: 16px; padding: 14px; font-size: 17px; font-weight: 800; width: 100%; }
+    .bar-wrap  { width: 100%; background: #E2E8F0; border-radius: 99px; height: 9px; overflow: hidden; }
+    .bar-fill  { height: 100%; background: linear-gradient(90deg,#6366F1,#8B5CF6); border-radius: 99px; transition: width 0.4s; }
+    .map-header { width: 100%; max-width: 460px; background: #fff; border-radius: 16px; padding: 12px 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); display: flex; justify-content: space-between; align-items: center; }
+    .stufe-block { width: 100%; max-width: 460px; background: #fff; border-radius: 20px; padding: 16px 14px; box-shadow: 0 2px 16px rgba(0,0,0,0.07); }
+    .stufe-head  { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .stufe-tag   { background: #6366F1; color: #fff; padding: 4px 12px; border-radius: 99px; font-weight: 800; font-size: 13px; }
+    .stufe-tag2  { background: #7C3AED; }
+    .stufe-sub   { font-size: 13px; color: #64748B; font-weight: 600; flex: 1; }
+    .free-tag    { background: #D1FAE5; color: #065F46; padding: 3px 10px; border-radius: 99px; font-size: 12px; font-weight: 700; }
+    .unlock-btn  { background: #7C3AED; color: #fff; border-radius: 12px; padding: 8px 14px; font-size: 13px; font-weight: 700; }
+    .level-grid  { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+    .lvl-btn     { width: 56px; height: 56px; border-radius: 14px; background: #F8FAFC; border: 2px solid #E2E8F0; color: #374151; font-weight: 800; font-size: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; position: relative; padding: 0; }
+    .lvl-done    { background: #D1FAE5 !important; border-color: #10B981 !important; }
+    .lvl-locked  { background: #F1F5F9 !important; color: #CBD5E1 !important; }
+    .lock-icon   { position: absolute; top: -7px; right: -7px; font-size: 13px; }
+    .q-label   { font-size: 20px; font-weight: 800; color: #1E1B4B; text-align: center; }
+    .g-box     { background: #F8FAFC; border-radius: 16px; padding: 16px 12px 10px; border: 2px dashed #CBD5E1; position: relative; }
+    .g-label   { position: absolute; top: -11px; left: 12px; background: #6366F1; color: #fff; font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 99px; }
+    .emoji-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; min-height: 64px; align-items: center; }
+    .emoji-item { font-size: clamp(22px,5vw,32px); display: inline-block; }
+    .op-sign   { text-align: center; font-size: 30px; font-weight: 900; color: #6366F1; }
+    .big-calc  { text-align: center; font-size: 42px; font-weight: 900; color: #7C3AED; padding: 12px 0; }
+    .ans-row   { display: flex; gap: 12px; justify-content: center; margin-top: 4px; }
+    .ans-btn   { width: 78px; height: 78px; border-radius: 20px; font-size: 28px; font-weight: 900; color: #1E1B4B; background: #fff; border: 3px solid #E2E8F0; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: transform 0.15s; padding: 0; }
+    .ans-correct { background: #D1FAE5 !important; border-color: #10B981 !important; transform: scale(1.08); }
+    .ans-wrong   { background: #FEE2E2 !important; border-color: #EF4444 !important; }
+    .ans-reveal  { background: #D1FAE5 !important; border-color: #10B981 !important; }
+    .feedback  { text-align: center; font-weight: 700; font-size: 16px; padding: 10px 14px; border-radius: 12px; }
+    .fb-ok     { background: #D1FAE5; color: #065F46; }
+    .fb-no     { background: #FEE2E2; color: #991B1B; }
+    .fb-empty  { opacity: 0; background: #F8FAFC; }
+    .lvl-badge { background: #EEF2FF; color: #4F46E5; padding: 4px 12px; border-radius: 99px; font-size: 13px; font-weight: 800; }
+    .game-top  { display: flex; justify-content: space-between; align-items: center; }
+    .pay-option { border: 2px solid #E2E8F0; border-radius: 16px; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .pay-best   { border-color: #7C3AED !important; background: #F5F3FF !important; }
+    .pay-small-btn { background: #6366F1; color: #fff; border-radius: 12px; padding: 10px 16px; font-size: 15px; font-weight: 800; white-space: nowrap; }
+    .user-badge { display: flex; align-items: center; gap: 8px; justify-content: center; background: #EEF2FF; border-radius: 12px; padding: 10px 16px; font-size: 15px; font-weight: 700; color: #4F46E5; }
+    .prog-text  { font-size: 13px; color: #94A3B8; text-align: right; margin-top: 4px; }
+    .stars-row  { display: flex; justify-content: center; gap: 4px; }
+    @keyframes bounce {
+      0%   { transform: translateY(0) scale(1); }
+      35%  { transform: translateY(-14px) scale(1.2); }
+      65%  { transform: translateY(-5px) scale(1.06); }
+      100% { transform: translateY(0) scale(1); }
+    }
+    .do-bounce { animation: bounce 0.5s ease both; }
+  </style>
 </head>
 <body>
-<h1>Pi Kids Math</h1>
-<div id="user-info">Bitte einloggen</div>
-<button onclick="signIn()">Mit Pi einloggen</button>
+  <div id="pi-login" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.95);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+<h2>Pi Kids Math</h2>
+<p>Bitte mit Pi einloggen um zu spielen</p>
+<button onclick="signIn()" style="background:#6366F1;color:#fff;padding:14px;border-radius:16px;font-size:17px;border:none;width:200px;">Mit Pi einloggen</button>
+</div>
 
 <script>
 function signIn() {
 Pi.authenticate(["username"], function(payment) {})
 .then(function(auth) {
-document.getElementById("user-info").innerText =
-"Eingeloggt als: " + auth.user.username;
+document.getElementById("pi-login").style.display = "none";
+window.piUser = auth.user.username;
 })
 .catch(function(err) {
-document.getElementById("user-info").innerText =
-"Fehler: " + err.message;
+alert("Fehler: " + err.message);
 });
 }
+</script>
+<div id="app"></div>
+<script>
+// ── KONFIGURATION ─────────────────────────────────────────────────────────────
+const SANDBOX   = true;
+const Q_PER_LVL = 5;
+const EMOJI_SETS = [
+  ["🍎","🍓","🍊","🍋","🍇","🍒","🥝"],
+  ["🐸","🐥","🐠","🦋","🐣","🐢","🦊"],
+  ["⭐","🌟","💫","✨","🎈","🎀","🏆"],
+];
+const LEVELS = Array.from({length:28},(_,i)=>{
+  const n=i+1, es=EMOJI_SETS[Math.floor(i/10)%3];
+  if(n<=20){ const mx=Math.min(3+Math.floor(n/2),10); return{id:n,stufe:1,mx,ops:n<=10?["+"]:["+","-"],free:true,es}; }
+  const mx=Math.min(2+Math.floor((n-20)/2),10);
+  return{id:n,stufe:2,mx,ops:n<=22?["×"]:["×","÷"],free:n<=22,es};
+});
+
+function rand(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function makeQ(cfg){
+  const op=cfg.ops[Math.floor(Math.random()*cfg.ops.length)];
+  const emoji=cfg.es[Math.floor(Math.random()*cfg.es.length)];
+  let a,b,ans;
+  if(op==="+"){a=rand(1,cfg.mx-1);b=rand(1,cfg.mx-a);ans=a+b;}
+  else if(op==="-"){a=rand(2,cfg.mx);b=rand(1,a-1);ans=a-b;}
+  else if(op==="×"){a=rand(1,cfg.mx);b=rand(1,5);ans=a*b;}
+  else{b=rand(1,5);ans=rand(1,cfg.mx);a=ans*b;}
+  let w1=ans+(Math.random()>.5?1:-1); if(w1<0)w1=ans+2; if(w1===ans)w1++;
+  let w2=w1+(Math.random()>.5?1:2);   if(w2===ans||w2===w1)w2=w1+2;
+  return{a,b,op,ans,emoji,choices:[ans,w1,w2].sort(()=>Math.random()-.5)};
+}
+
+// ── FORTSCHRITT ───────────────────────────────────────────────────────────────
+let prog=(()=>{try{return JSON.parse(localStorage.getItem("pkm4")||"{}");}catch{return{};}})();
+function saveProg(){try{localStorage.setItem("pkm4",JSON.stringify(prog));}catch{}}
+
+// ── PI SDK ────────────────────────────────────────────────────────────────────
+let piUser=null;
+function piInit(){if(window.Pi)window.Pi.init({version:"2.0",sandbox:SANDBOX});}
+async function piLogin(){
+  if(!window.Pi){piUser={username:"test_nutzer"};return piUser;}
+  return new Promise((res,rej)=>{
+    window.Pi.authenticate(["username"],inc=>{
+      console.log("Unvollständige Zahlung:", inc);
+    }).then(a=>{piUser=a.user;res(a.user);}).catch(rej);
+  });
+}
+async function piPay(amount,memo,onOk){
+  if(!window.Pi){setTimeout(()=>onOk({txid:"test_"+Date.now()}),1200);return;}
+  window.Pi.createPayment({amount,memo,metadata:{app:"PiKidsMath"}},{
+    onReadyForServerApproval: async (paymentId) => {
+      try {
+        await fetch(BACKEND_URL+'/payments/approve', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({paymentId})
+        });
+      } catch(e){ console.error('Approve error:', e); }
+    },
+    onReadyForServerCompletion: async (paymentId, txid) => {
+      try {
+        const res = await fetch(BACKEND_URL+'/payments/complete', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({paymentId, txid})
+        });
+        const data = await res.json();
+        if(data.success) onOk({txid});
+      } catch(e){ console.error('Complete error:', e); }
+    },
+    onCancel: (pid) => console.log('Abgebrochen:', pid),
+    onError: (err) => console.error('Fehler:', err)
+  });
+}
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let screen="home",curLevel=null,curQ=null,qNum=0,hits=0,sel=null,fb=null,bouncing=false;
+let answerLocked=false;
+
+// ── HELPER ────────────────────────────────────────────────────────────────────
+const app=document.getElementById("app");
+
+function mkEl(tag,opts){
+  const e=document.createElement(tag);
+  if(opts.cls)  e.className=opts.cls;
+  if(opts.text) e.textContent=opts.text;
+  if(opts.html) e.innerHTML=opts.html;
+  if(opts.style)Object.assign(e.style,opts.style);
+  if(opts.click)e.addEventListener("click",opts.click);
+  if(opts.disabled)e.disabled=true;
+  return e;
+}
+
+function mkBtn(text,cls,onClick){
+  return mkEl("button",{text,cls,click:onClick});
+}
+
+function mkBar(val,max){
+  const w=mkEl("div",{cls:"bar-wrap"});
+  const f=mkEl("div",{cls:"bar-fill"});
+  f.style.width=Math.round((val/max)*100)+"%";
+  w.appendChild(f); return w;
+}
+
+function render(){
+  app.innerHTML="";
+  ({home:renderHome,map:renderMap,game:renderGame,done:renderDone,pay:renderPay,yay:renderYay}[screen]||renderHome)();
+}
+
+// ── HOME ──────────────────────────────────────────────────────────────────────
+function renderHome(){
+  const card=mkEl("div",{cls:"card"});
+
+  card.appendChild(mkEl("div",{html:"🧮",style:{fontSize:"66px",textAlign:"center"}}));
+  card.appendChild(mkEl("h1",{text:"Pi Lernen"}));
+  card.appendChild(mkEl("p",{cls:"sub",text:"Mathe für Kinder — spielend leicht!"}));
+
+  const pills=mkEl("div",{cls:"pills"});
+  ["🆓 20 Level kostenlos","➕➖ Plus & Minus","✖️➗ Mal & Geteilt"].forEach(t=>{
+    pills.appendChild(mkEl("span",{cls:"pill",text:t}));
+  });
+  card.appendChild(pills);
+
+  if(piUser){
+    const ub=mkEl("div",{cls:"user-badge"});
+    ub.appendChild(mkEl("span",{text:"π"}));
+    ub.appendChild(mkEl("span",{text:piUser.username}));
+    card.appendChild(ub);
+  } else {
+    let busy=false;
+    const lb=mkEl("button",{cls:"btn-pi",text:"π Mit Pi einloggen",click:async()=>{
+      if(busy)return; busy=true; lb.textContent="Verbinde...";
+      await piLogin(); render();
+    }});
+    card.appendChild(lb);
+  }
+
+  card.appendChild(mkBtn("▶ Spielen","btn-green",()=>{screen="map";render();}));
+  card.appendChild(mkEl("p",{cls:"sub",text:"Eltern melden sich an · Kinder spielen",style:{fontSize:"12px",color:"#94A3B8"}}));
+  app.appendChild(card);
+}
+
+// ── MAP ───────────────────────────────────────────────────────────────────────
+function renderMap(){
+  const done=prog.completedLevels||[];
+  const unlock=prog.unlockedStufe2||false;
+
+  // Header
+  const hdr=mkEl("div",{cls:"map-header"});
+  hdr.appendChild(mkBtn("← Home","btn-back",()=>{screen="home";render();}));
+  hdr.appendChild(mkEl("span",{html:"<b style='color:#4F46E5;font-size:17px'>π Pi Lernen</b>"}));
+  hdr.appendChild(mkEl("span",{text:"⭐ "+Math.min(5,Math.floor(done.length/4))+"/5",style:{fontSize:"13px",fontWeight:"700",color:"#6366F1"}}));
+  app.appendChild(hdr);
+
+  // Stufe 1
+  const s1=LEVELS.filter(l=>l.stufe===1);
+  const doneS1=s1.filter(l=>done.includes(l.id)).length;
+  const b1=mkEl("div",{cls:"stufe-block"});
+  const h1=mkEl("div",{cls:"stufe-head"});
+  h1.appendChild(mkEl("span",{cls:"stufe-tag",text:"Stufe 1"}));
+  h1.appendChild(mkEl("span",{cls:"stufe-sub",text:"➕ ➖ Plus & Minus · 1–10"}));
+  h1.appendChild(mkEl("span",{cls:"free-tag",text:"🆓 Kostenlos"}));
+  b1.appendChild(h1);
+  const g1=mkEl("div",{cls:"level-grid"});
+  s1.forEach(l=>{
+    const isDone=done.includes(l.id);
+    const lb=mkEl("button",{cls:"lvl-btn"+(isDone?" lvl-done":""),click:()=>startLevel(l)});
+    if(isDone)lb.appendChild(mkEl("span",{text:"✅",style:{fontSize:"11px"}}));
+    lb.appendChild(mkEl("span",{text:String(l.id)}));
+    g1.appendChild(lb);
+  });
+  b1.appendChild(g1);
+  b1.appendChild(mkBar(doneS1,s1.length));
+  b1.appendChild(mkEl("p",{cls:"prog-text",text:doneS1+" / "+s1.length+" abgeschlossen"}));
+  app.appendChild(b1);
+
+  // Stufe 2
+  const s2=LEVELS.filter(l=>l.stufe===2);
+  const doneS2=s2.filter(l=>done.includes(l.id)).length;
+  const b2=mkEl("div",{cls:"stufe-block"});
+  const h2=mkEl("div",{cls:"stufe-head"});
+  h2.appendChild(mkEl("span",{cls:"stufe-tag stufe-tag2",text:"Stufe 2"}));
+  h2.appendChild(mkEl("span",{cls:"stufe-sub",text:"✖️ ➗ Mal & Geteilt"}));
+  if(!unlock){
+    h2.appendChild(mkBtn("🔓 Freischalten","unlock-btn",()=>{screen="pay";render();}));
+  }
+  b2.appendChild(h2);
+  const g2=mkEl("div",{cls:"level-grid"});
+  s2.forEach(l=>{
+    const isDone=done.includes(l.id);
+    const locked=!l.free&&!unlock;
+    const lb=mkEl("button",{cls:"lvl-btn"+(isDone?" lvl-done":locked?" lvl-locked":"")});
+    if(locked){
+      const lk=mkEl("span",{cls:"lock-icon",text:"🔒"});
+      lb.appendChild(lk);
+      // gesperrte Level: kein Click
+    } else {
+      lb.addEventListener("click",()=>startLevel(l));
+    }
+    if(isDone)lb.appendChild(mkEl("span",{text:"✅",style:{fontSize:"11px"}}));
+    lb.appendChild(mkEl("span",{text:String(l.id)}));
+    g2.appendChild(lb);
+  });
+  b2.appendChild(g2);
+  if(unlock){
+    b2.appendChild(mkBar(doneS2,s2.length));
+    b2.appendChild(mkEl("p",{cls:"prog-text",text:doneS2+" / "+s2.length+" abgeschlossen"}));
+  } else {
+    b2.appendChild(mkEl("p",{text:"Level 23–28 mit Pi freischalten",style:{fontSize:"13px",color:"#7C3AED",textAlign:"center",fontWeight:"600"}}));
+  }
+  app.appendChild(b2);
+}
+
+function startLevel(lv){
+  curLevel=lv; qNum=0; hits=0; sel=null; fb=null; bouncing=false; answerLocked=false;
+  curQ=makeQ(lv); screen="game"; render();
+}
+
+// ── GAME ──────────────────────────────────────────────────────────────────────
+function renderGame(){
+  const card=mkEl("div",{cls:"card"});
+
+  // Top
+  const top=mkEl("div",{cls:"game-top"});
+  const backBtn=mkBtn("← Karte","btn-back",()=>{
+    screen="map"; render();
+  });
+  top.appendChild(backBtn);
+  top.appendChild(mkEl("span",{cls:"lvl-badge",text:"Level "+curLevel.id}));
+  top.appendChild(mkEl("span",{text:(qNum+1)+"/"+Q_PER_LVL,style:{fontSize:"13px",fontWeight:"700",color:"#6366F1"}}));
+  card.appendChild(top);
+  card.appendChild(mkBar(qNum,Q_PER_LVL));
+
+  // Frage
+  card.appendChild(mkEl("p",{cls:"q-label",text:"Was ist "+curQ.a+" "+curQ.op+" "+curQ.b+"?"}));
+
+  // Visualisierung Plus
+  if(curQ.op==="+"){
+    const g1=mkEl("div",{cls:"g-box"});
+    g1.appendChild(mkEl("span",{cls:"g-label",text:"Gruppe 1"}));
+    const eg1=mkEl("div",{cls:"emoji-grid"});
+    for(let i=0;i<curQ.a;i++){
+      const s=mkEl("span",{cls:"emoji-item",text:curQ.emoji});
+      if(bouncing&&fb==="ok"){s.classList.add("do-bounce");s.style.animationDelay=(i*0.06)+"s";}
+      eg1.appendChild(s);
+    }
+    g1.appendChild(eg1);
+    card.appendChild(g1);
+    card.appendChild(mkEl("div",{cls:"op-sign",text:"+"}));
+    const g2=mkEl("div",{cls:"g-box"});
+    g2.appendChild(mkEl("span",{cls:"g-label",text:"Gruppe 2"}));
+    const eg2=mkEl("div",{cls:"emoji-grid"});
+    for(let i=0;i<curQ.b;i++){
+      const s=mkEl("span",{cls:"emoji-item",text:curQ.emoji});
+      if(bouncing&&fb==="ok"){s.classList.add("do-bounce");s.style.animationDelay=(i*0.06)+"s";}
+      eg2.appendChild(s);
+    }
+    g2.appendChild(eg2);
+    card.appendChild(g2);
+
+  // Visualisierung Minus — alle zeigen, weggenommene ausgegraut
+  } else if(curQ.op==="-"){
+    const gbox=mkEl("div",{cls:"g-box"});
+    gbox.appendChild(mkEl("span",{cls:"g-label",text:curQ.b+" wegnehmen"}));
+    const egrid=mkEl("div",{cls:"emoji-grid"});
+    for(let i=0;i<curQ.a;i++){
+      const s=mkEl("span",{cls:"emoji-item",text:curQ.emoji});
+      if(i < curQ.ans){
+        if(bouncing&&fb==="ok"){s.classList.add("do-bounce");s.style.animationDelay=(i*0.06)+"s";}
+      } else {
+        s.style.opacity="0.2";
+        s.style.filter="grayscale(1)";
+        s.style.textDecoration="line-through";
+      }
+      egrid.appendChild(s);
+    }
+    gbox.appendChild(egrid);
+    card.appendChild(gbox);
+    card.appendChild(mkEl("p",{text:"Wie viele bleiben übrig? 🤔",style:{textAlign:"center",fontSize:"15px",color:"#64748B",fontWeight:"600"}}));
+
+  } else {
+    card.appendChild(mkEl("div",{cls:"big-calc",text:curQ.a+" "+curQ.op+" "+curQ.b+" = ?"}));
+  }
+
+  // Antwort-Buttons
+  const ar=mkEl("div",{cls:"ans-row"});
+  curQ.choices.forEach(c=>{
+    const ab=mkEl("button",{cls:"ans-btn",text:String(c),click:()=>doAnswer(c)});
+    if(sel!==null){
+      if(c===sel)         ab.classList.add(fb==="ok"?"ans-correct":"ans-wrong");
+      else if(c===curQ.ans) ab.classList.add("ans-reveal");
+    }
+    ar.appendChild(ab);
+  });
+  card.appendChild(ar);
+
+  // Feedback
+  const fbox=mkEl("div",{cls:"feedback "+(fb?"fb-"+(fb==="ok"?"ok":"no"):"fb-empty"),
+    text:fb==="ok"?"🎉 Richtig! Toll gemacht!":fb==="no"?"😅 Fast! Die Antwort war "+curQ.ans:" "});
+  card.appendChild(fbox);
+
+  card.appendChild(mkEl("p",{text:"✅ "+hits+" richtig in diesem Level",style:{textAlign:"center",fontSize:"13px",color:"#94A3B8"}}));
+  app.appendChild(card);
+}
+
+function doAnswer(c){
+  if(answerLocked)return;
+  answerLocked=true;
+  sel=c;
+  const ok=c===curQ.ans;
+  fb=ok?"ok":"no";
+  if(ok){bouncing=true;hits++;}
+  render();
+  setTimeout(()=>advance(),ok?1100:1350);
+}
+
+function advance(){
+  const nxt=qNum+1;
+  if(nxt>=Q_PER_LVL){
+    const passed=hits>=Math.ceil(Q_PER_LVL*0.6);
+    if(passed){
+      const cl=prog.completedLevels||[];
+      if(!cl.includes(curLevel.id))prog.completedLevels=[...cl,curLevel.id];
+      saveProg();
+    }
+    screen="done"; render(); return;
+  }
+  qNum=nxt; sel=null; fb=null; bouncing=false; answerLocked=false;
+  curQ=makeQ(curLevel); render();
+}
+
+// ── DONE ──────────────────────────────────────────────────────────────────────
+function renderDone(){
+  const passed=hits>=Math.ceil(Q_PER_LVL*0.6);
+  const nextLv=LEVELS.find(l=>l.id===(curLevel.id+1));
+  const unlock=prog.unlockedStufe2||false;
+  const card=mkEl("div",{cls:"card"});
+
+  card.appendChild(mkEl("div",{text:passed?"🏆":"💪",style:{fontSize:"62px",textAlign:"center"}}));
+  card.appendChild(mkEl("h1",{text:passed?"Level geschafft!":"Noch mal versuchen!",style:{fontSize:"24px"}}));
+  card.appendChild(mkEl("p",{cls:"sub",text:hits+" von "+Q_PER_LVL+" richtig"}));
+
+  const sr=mkEl("div",{cls:"stars-row"});
+  for(let i=0;i<Q_PER_LVL;i++){
+    sr.appendChild(mkEl("span",{text:"⭐",style:{fontSize:"22px",filter:i<hits?"none":"grayscale(1) opacity(0.3)"}}));
+  }
+  card.appendChild(sr);
+  card.appendChild(mkBtn("🔄 Nochmal spielen","btn-green",()=>startLevel(curLevel)));
+
+  if(passed&&nextLv){
+    const canPlay=nextLv.free||unlock;
+    const nb=mkBtn(
+      canPlay?"▶ Level "+nextLv.id+" starten":"🔒 Level "+nextLv.id+" freischalten",
+      "btn-purple",
+      ()=>{if(canPlay)startLevel(nextLv);else{screen="pay";render();}}
+    );
+    if(!canPlay)nb.style.background="#94A3B8";
+    card.appendChild(nb);
+  }
+
+  card.appendChild(mkBtn("← Zur Levelkarte","btn-back",()=>{screen="map";render();}));
+  app.appendChild(card);
+}
+
+// ── PAYMENT ───────────────────────────────────────────────────────────────────
+function renderPay(){
+  const card=mkEl("div",{cls:"card"});
+  card.appendChild(mkEl("div",{text:"🔓",style:{fontSize:"52px",textAlign:"center"}}));
+  card.appendChild(mkEl("h1",{text:"Stufe 2 freischalten",style:{fontSize:"22px"}}));
+  card.appendChild(mkEl("p",{cls:"sub",text:"8 Level mit Mal & Geteilt. Level 21–22 kostenlos · Level 23–28 mit Pi freischalten.",style:{fontSize:"14px",lineHeight:"1.55"}}));
+
+  function payOption(label,sub,amount,memo,isPurple){
+    const o=mkEl("div",{cls:"pay-option"+(isPurple?" pay-best":"")});
+    const info=mkEl("div",{});
+    info.appendChild(mkEl("div",{text:label,style:{fontWeight:"800",fontSize:"15px",color:isPurple?"#7C3AED":"inherit"}}));
+    info.appendChild(mkEl("div",{text:sub,style:{color:isPurple?"#7C3AED":"#64748B",fontSize:"13px"}}));
+    o.appendChild(info);
+    let busy=false;
+    const pb=mkEl("button",{cls:"pay-small-btn",text:amount+" π",click:async()=>{
+      if(busy)return; busy=true; pb.textContent="⏳...";
+      if(!piUser){await piLogin();}
+      await piPay(amount,memo,()=>{prog.unlockedStufe2=true;saveProg();screen="yay";render();});
+    }});
+    if(isPurple)pb.style.background="#7C3AED";
+    o.appendChild(pb);
+    return o;
+  }
+
+  card.appendChild(payOption("1 Level freischalten","Flexibel · zahle pro Level",0.5,"Pi Lernen 1 Level",false));
+  card.appendChild(payOption("⭐ Alle Level freischalten","6 Level · spare 40%",5,"Pi Lernen Stufe 2 komplett",true));
+
+  if(!piUser) card.appendChild(mkEl("p",{text:"⚠️ Bitte zuerst mit Pi einloggen",style:{textAlign:"center",fontSize:"13px",color:"#F59E0B",fontWeight:"700"}}));
+  card.appendChild(mkBtn("← Zurück","btn-back",()=>{screen="map";render();}));
+  app.appendChild(card);
+}
+
+// ── CELEBRATE ─────────────────────────────────────────────────────────────────
+function renderYay(){
+  const card=mkEl("div",{cls:"card"});
+  card.appendChild(mkEl("div",{text:"🎊",style:{fontSize:"68px",textAlign:"center"}}));
+  card.appendChild(mkEl("h1",{text:"Freigeschaltet!",style:{fontSize:"24px"}}));
+  card.appendChild(mkEl("p",{cls:"sub",text:"Stufe 2 ist jetzt komplett verfügbar. Viel Spaß!"}));
+  card.appendChild(mkBtn("▶ Zur Levelkarte","btn-green",()=>{screen="map";render();}));
+  app.appendChild(card);
+}
+
+// ── START ─────────────────────────────────────────────────────────────────────
+piInit();
+render();
 </script>
 </body>
 </html>
