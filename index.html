@@ -11,6 +11,7 @@
 <div id="user-info">Lade...</div>
 
 <script>
+window.addEventListener('load', function() {
 Pi.init({ version: "2.0", sandbox: true });
 
 Pi.authenticate(["username"], onIncompletePaymentFound)
@@ -26,6 +27,7 @@ document.getElementById("user-info").innerText =
 function onIncompletePaymentFound(payment) {
 console.log("Incomplete payment found", payment);
 }
+});
 </script>
 </body>
 </html>
