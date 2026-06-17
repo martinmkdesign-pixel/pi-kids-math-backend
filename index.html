@@ -11,7 +11,7 @@
 <div id="user-info">Lade...</div>
 
 <script>
-Pi.init({ version: "2.0", sandbox: false });
+Pi.init({ version: "2.0", sandbox: true });
 
 Pi.authenticate(["username"], onIncompletePaymentFound)
 .then(function(auth) {
