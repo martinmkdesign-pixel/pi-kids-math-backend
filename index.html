@@ -93,6 +93,7 @@ alert("Fehler: " + err.message);
 <script>
 // ── KONFIGURATION ─────────────────────────────────────────────────────────────
 const SANDBOX   = true;
+  const BACKEND_URL = "https://marvelous-wisdom-production-1860.up.railway.app";
 const Q_PER_LVL = 5;
 const EMOJI_SETS = [
   ["🍎","🍓","🍊","🍋","🍇","🍒","🥝"],
@@ -136,31 +137,32 @@ async function piLogin(){
   });
 }
 async function piPay(amount,memo,onOk){
-  if(!window.Pi){setTimeout(()=>onOk({txid:"test_"+Date.now()}),1200);return;}
-  window.Pi.createPayment({amount,memo,metadata:{app:"PiKidsMath"}},{
-    onReadyForServerApproval: async (paymentId) => {
-      try {
-        await fetch(BACKEND_URL+'/payments/approve', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({paymentId})
-        });
-      } catch(e){ console.error('Approve error:', e); }
-    },
-    onReadyForServerCompletion: async (paymentId, txid) => {
-      try {
-        const res = await fetch(BACKEND_URL+'/payments/complete', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({paymentId, txid})
-        });
-        const data = await res.json();
-        if(data.success) onOk({txid});
-      } catch(e){ console.error('Complete error:', e); }
-    },
-    onCancel: (pid) => console.log('Abgebrochen:', pid),
-    onError: (err) => console.error('Fehler:', err)
-  });
+ if(!window.Pi){setTimeout(()=>onOk({txid:"test_"+Date.now(),priceType:amount>=5?"all_levels":"single_level"}),1200);return;}
+window.Pi.createPayment({amount,memo,metadata:{app:"PiKidsMath"}},{
+onReadyForServerApproval: async (paymentId) => {
+try {
+await fetch(BACKEND_URL+'/payments/approve', {
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({paymentId})
+});
+} catch(e){ console.error('Approve error:', e); }
+},
+onReadyForServerCompletion: async (paymentId, txid) => {
+try {
+const res = await fetch(BACKEND_URL+'/payments/complete', {
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({paymentId, txid})
+});
+const data = await res.json();
+if(data.success && data.unlocked) onOk({txid, priceType:data.priceType});
+else console.error('Complete fehlgeschlagen:', data);
+} catch(e){ console.error('Complete error:', e); }
+},
+onCancel: (pid) => console.log('Abgebrochen:', pid),
+onError: (err) => console.error('Fehler:', err)
+});
 }
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
@@ -278,7 +280,8 @@ function renderMap(){
   const g2=mkEl("div",{cls:"level-grid"});
   s2.forEach(l=>{
     const isDone=done.includes(l.id);
-    const locked=!l.free&&!unlock;
+    const singleUnlocked=prog.singleUnlockedLevels||[];
+const locked=!l.free && !unlock && !singleUnlocked.includes(l.id);
     const lb=mkEl("button",{cls:"lvl-btn"+(isDone?" lvl-done":locked?" lvl-locked":"")});
     if(locked){
       const lk=mkEl("span",{cls:"lock-icon",text:"🔒"});
@@ -460,21 +463,34 @@ function renderPay(){
   card.appendChild(mkEl("p",{cls:"sub",text:"8 Level mit Mal & Geteilt. Level 21–22 kostenlos · Level 23–28 mit Pi freischalten.",style:{fontSize:"14px",lineHeight:"1.55"}}));
 
   function payOption(label,sub,amount,memo,isPurple){
-    const o=mkEl("div",{cls:"pay-option"+(isPurple?" pay-best":"")});
-    const info=mkEl("div",{});
-    info.appendChild(mkEl("div",{text:label,style:{fontWeight:"800",fontSize:"15px",color:isPurple?"#7C3AED":"inherit"}}));
-    info.appendChild(mkEl("div",{text:sub,style:{color:isPurple?"#7C3AED":"#64748B",fontSize:"13px"}}));
-    o.appendChild(info);
-    let busy=false;
-    const pb=mkEl("button",{cls:"pay-small-btn",text:amount+" π",click:async()=>{
-      if(busy)return; busy=true; pb.textContent="⏳...";
-      if(!piUser){await piLogin();}
-      await piPay(amount,memo,()=>{prog.unlockedStufe2=true;saveProg();screen="yay";render();});
-    }});
-    if(isPurple)pb.style.background="#7C3AED";
-    o.appendChild(pb);
-    return o;
-  }
+const o=mkEl("div",{cls:"pay-option"+(isPurple?" pay-best":"")});
+const info=mkEl("div",{});
+info.appendChild(mkEl("div",{text:label,style:{fontWeight:"800",fontSize:"15px",color:isPurple?"#7C3AED":"inherit"}}));
+info.appendChild(mkEl("div",{text:sub,style:{color:isPurple?"#7C3AED":"#64748B",fontSize:"13px"}}));
+o.appendChild(info);
+let busy=false;
+const pb=mkEl("button",{cls:"pay-small-btn",text:amount+" π",click:async()=>{
+if(busy)return; busy=true; pb.textContent="⏳...";
+if(!piUser){await piLogin();}
+await piPay(amount,memo,(result)=>{
+if(result.priceType==="all_levels"){
+prog.unlockedStufe2=true;
+} else if(result.priceType==="single_level"){
+const s2=LEVELS.filter(l=>l.stufe===2);
+const done=prog.completedLevels||[];
+const singleUnlocked=prog.singleUnlockedLevels||[];
+const nextLocked=s2.find(l=>!l.free && !singleUnlocked.includes(l.id));
+if(nextLocked) prog.singleUnlockedLevels=[...singleUnlocked,nextLocked.id];
+}
+saveProg();
+screen="yay";render();
+});
+busy=false; pb.textContent=amount+" π";
+}});
+if(isPurple)pb.style.background="#7C3AED";
+o.appendChild(pb);
+return o;
+}
 
   card.appendChild(payOption("1 Level freischalten","Flexibel · zahle pro Level",0.5,"Pi Lernen 1 Level",false));
   card.appendChild(payOption("⭐ Alle Level freischalten","6 Level · spare 40%",5,"Pi Lernen Stufe 2 komplett",true));
