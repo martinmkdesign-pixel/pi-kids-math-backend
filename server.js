@@ -8,7 +8,7 @@ const PI_API_KEY = process.env.PI_API_KEY;
 app.use(express.json());
 app.use(express.static('.'));
 app.use(cors({
-origin: ['https://golden-cobbler-2dc822.netlify.app', 'https://sandbox.minepi.com'],
+origin: ['https://golden-cobbler-2dc822.netlify.app', 'https://sandbox.minepi.com', 'https://marvelous-wisdom-production-1860.up.railway.app'],
 methods: ['GET', 'POST'],
 allowedHeaders: ['Content-Type', 'Authorization']
 }));
