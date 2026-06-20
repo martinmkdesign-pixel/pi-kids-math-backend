@@ -156,7 +156,8 @@ alert("Fehler beim Abschließen der alten Zahlung: "+e.message);
 async function piPay(amount,memo,onOk){
 alert("piPay gestartet. amount="+amount+" window.Pi vorhanden="+(!!window.Pi));
 if(!window.Pi){setTimeout(()=>onOk({txid:"test_"+Date.now(),priceType:amount>=5?"all_levels":"single_level"}),1200);return;}
-window.Pi.createPayment({amount,memo,metadata:{app:"PiKidsMath"}},{
+try{
+const paymentPromise = window.Pi.createPayment({amount,memo,metadata:{app:"PiKidsMath"}},{
 onReadyForServerApproval: async (paymentId) => {
 alert("onReadyForServerApproval erreicht. paymentId="+paymentId);
 try {
@@ -165,6 +166,38 @@ method:'POST',
 headers:{'Content-Type':'application/json'},
 body:JSON.stringify({paymentId})
 });
+alert("Approve fetch zurück, status="+res.status);
+} catch(e){ console.error('Approve error:', e); alert("Approve FEHLER: "+e.message); }
+},
+onReadyForServerCompletion: async (paymentId, txid) => {
+alert("onReadyForServerCompletion erreicht. txid="+txid);
+try {
+const res = await fetch(BACKEND_URL+'/payments/complete', {
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({paymentId, txid})
+});
+const data = await res.json();
+alert("Complete Antwort: "+JSON.stringify(data));
+if(data.success && data.unlocked) onOk({txid, priceType:data.priceType});
+else console.error('Complete fehlgeschlagen:', data);
+} catch(e){ console.error('Complete error:', e); alert("Complete FEHLER: "+e.message); }
+},
+onCancel: (pid) => { console.log('Abgebrochen:', pid); alert("Zahlung ABGEBROCHEN: "+pid); },
+onError: (err) => { console.error('Fehler:', err); alert("Pi createPayment FEHLER: "+err.message); }
+});
+alert("createPayment() aufgerufen. Typ des Rückgabewerts: "+(typeof paymentPromise)+" - ist Promise: "+(paymentPromise instanceof Promise));
+if(paymentPromise instanceof Promise){
+paymentPromise.then(p=>{
+alert("createPayment Promise RESOLVED: "+JSON.stringify(p));
+}).catch(e=>{
+alert("createPayment Promise REJECTED: "+(e.message||JSON.stringify(e)));
+});
+}
+} catch(syncErr){
+alert("SYNCHRONER Fehler bei createPayment: "+syncErr.message);
+}
+}
 alert("Approve fetch zurück, status="+res.status);
 } catch(e){ console.error('Approve error:', e); alert("Approve FEHLER: "+e.message); }
 },
