@@ -7,7 +7,7 @@
 <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 <script>Pi.init({ version: "2.0", sandbox: true })</script>
 <style>
-  .splash-screen {
+.splash-screen {
 position: fixed; top: 0; left: 0; width: 100%; height: 100%;
 background: linear-gradient(160deg, #1E1B4B 0%, #4F46E5 60%, #312E81 100%);
 display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -25,7 +25,7 @@ color: #EEF2FF; font-size: 17px; font-weight: 500; line-height: 1.6; max-width: 
 .splash-pi {
 font-size: 48px; margin-bottom: 24px; opacity: 0.85;
 }
-  .consent-overlay {
+.consent-overlay {
 position: fixed; top: 0; left: 0; width: 100%; height: 100%;
 background: rgba(30, 27, 75, 0.55);
 display: flex; align-items: center; justify-content: center;
@@ -114,7 +114,7 @@ button { cursor: pointer; border: none; font-family: inherit; font-size: 16px; }
 </style>
 </head>
 <body>
-  <div class="splash-screen">
+<div class="splash-screen">
 <div class="splash-pi">π</div>
 <div class="splash-name">Martin Keßlinger · Montechrist1980</div>
 <div class="splash-message">Zahlen kennen keine Grenzen. Keine Sprache, keinen Glauben, keine Herkunft. Wer rechnet, spricht mit jedem, der je gerechnet hat. Willkommen in einer Sprache, die alle verbindet. Lerne und bewahre.</div>
@@ -125,13 +125,13 @@ button { cursor: pointer; border: none; font-family: inherit; font-size: 16px; }
 const SANDBOX = true;
 const BACKEND_URL = "https://marvelous-wisdom-production-1860.up.railway.app";
 const Q_PER_LVL = 5;
-  const TERMS_TEXT = `NUTZUNGSBEDINGUNGEN – KIDS MATH LEARNING
+const TERMS_TEXT = `NUTZUNGSBEDINGUNGEN – KIDS MATH LEARNING
 
 1. Anbieter
 Martin Keßlinger, Itzehoe, Schleswig-Holstein, E-Mail: martin.kesslinger@outlook.de
 
 2. Gegenstand
-Kids Math Learning ist ein Mathe-Lernspiel für Kinder. Die ersten 20 Level sind kostenlos. Weitere Level können optional über das Pi Network freigeschaltet werden.
+Kids Math Learning ist ein Mathe-Lernspiel für Kinder. Die ersten 50 Level (Plus & Minus) sind kostenlos. Weitere Level (Mal & Geteilt) können optional über das Pi Network freigeschaltet werden.
 
 3. Zielgruppe und Verantwortung der Erziehungsberechtigten
 Die App richtet sich an Kinder im Vorschul- und Grundschulalter. Die Nutzung erfolgt unter Aufsicht der Erziehungsberechtigten. Die Pi-Zahlungsfunktion darf nur durch oder mit Zustimmung eines Erziehungsberechtigten genutzt werden.
@@ -140,7 +140,7 @@ Die App richtet sich an Kinder im Vorschul- und Grundschulalter. Die Nutzung erf
 Die App läuft derzeit im Pi-Network-Testnet. Zahlungen erfolgen mit Test-Pi ohne realen Geldwert. Es entstehen keine echten Kosten.
 
 5. Leistungsbeschreibung
-Level 1–20: kostenlos. Level 21–22: kostenlos. Level 23–28: einzeln (0,5 π) oder gesammelt (5 π) freischaltbar. Preise und Funktionsumfang können angepasst werden.
+Level 1–50: kostenlos (Plus & Minus). Level 51–55: kostenlos (Mal & Geteilt). Level 56–100: einzeln (0,5 π) oder gesammelt (14 π) freischaltbar. Preise und Funktionsumfang können angepasst werden.
 
 6. Zahlungsabwicklung
 Zahlungen laufen über die Pi-Network-Plattform. Der Anbieter hat auf deren Funktionsweise keinen Einfluss.
@@ -194,11 +194,22 @@ const EMOJI_SETS = [
 ["🐸","🐥","🐠","🦋","🐣","🐢","🦊"],
 ["⭐","🌟","💫","✨","🎈","🎀","🏆"],
 ];
-const LEVELS = Array.from({length:28},(_,i)=>{
+const LEVELS = Array.from({length:100},(_,i)=>{
 const n=i+1, es=EMOJI_SETS[Math.floor(i/10)%3];
-if(n<=20){ const mx=Math.min(3+Math.floor(n/2),10); return{id:n,stufe:1,mx,ops:n<=10?["+"]:["+","-"],free:true,es}; }
-const mx=Math.min(2+Math.floor((n-20)/2),10);
-return{id:n,stufe:2,mx,ops:n<=22?["×"]:["×","÷"],free:n<=22,es};
+if(n<=20){
+// Level 1-20: Plus/Minus, Zahlen 1-10
+const mx=Math.min(3+Math.floor(n/2),10);
+return{id:n,stufe:1,mx,ops:n<=10?["+"]:["+","-"],free:true,es};
+}
+if(n<=50){
+// Level 21-50: Plus/Minus, Zahlen schrittweise steigend von ~10 bis ~999
+const progress=(n-20)/(50-20);
+const mx=Math.round(10+progress*(999-10));
+return{id:n,stufe:1,mx,ops:["+","-"],free:true,es};
+}
+// Level 51-100: Mal/Geteilt, Stufe 2
+const mx=Math.min(2+Math.floor((n-50)/2),10);
+return{id:n,stufe:2,mx,ops:n<=55?["×"]:["×","÷"],free:n<=55,es};
 });
 
 function rand(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
@@ -210,8 +221,9 @@ if(op==="+"){a=rand(1,cfg.mx-1);b=rand(1,cfg.mx-a);ans=a+b;}
 else if(op==="-"){a=rand(2,cfg.mx);b=rand(1,a-1);ans=a-b;}
 else if(op==="×"){a=rand(1,cfg.mx);b=rand(1,5);ans=a*b;}
 else{b=rand(1,5);ans=rand(1,cfg.mx);a=ans*b;}
-let w1=ans+(Math.random()>.5?1:-1); if(w1<0)w1=ans+2; if(w1===ans)w1++;
-let w2=w1+(Math.random()>.5?1:2); if(w2===ans||w2===w1)w2=w1+2;
+const spread = cfg.mx>20 ? Math.max(2,Math.round(cfg.mx*0.05)) : 1;
+let w1=ans+(Math.random()>.5?spread:-spread); if(w1<0)w1=ans+spread*2; if(w1===ans)w1+=spread;
+let w2=w1+(Math.random()>.5?spread:spread*2); if(w2===ans||w2===w1)w2=w1+spread*2;
 return{a,b,op,ans,emoji,choices:[ans,w1,w2].sort(()=>Math.random()-.5)};
 }
 
@@ -242,7 +254,7 @@ console.error('Fehler beim Abschließen einer offenen Zahlung:', e);
 });
 }
 async function piPay(amount,memo,onOk,onFail){
-if(!window.Pi){setTimeout(()=>onOk({txid:"test_"+Date.now(),priceType:amount>=5?"all_levels":"single_level"}),1200);return;}
+if(!window.Pi){setTimeout(()=>onOk({txid:"test_"+Date.now(),priceType:amount>=14?"all_levels":"single_level"}),1200);return;}
 try{
 window.Pi.createPayment({amount,memo,metadata:{app:"PiKidsMath"}},{
 onReadyForServerApproval: async (paymentId) => {
@@ -367,7 +379,7 @@ card.appendChild(mkEl("h1",{text:"Kids Math Learning"}));
 card.appendChild(mkEl("p",{cls:"sub",text:"Mathe für Kinder — spielend leicht!"}));
 
 const pills=mkEl("div",{cls:"pills"});
-["🆓 20 Level kostenlos","➕➖ Plus & Minus","✖️➗ Mal & Geteilt"].forEach(t=>{
+["🆓 50 Level kostenlos","➕➖ Plus & Minus","✖️➗ Mal & Geteilt"].forEach(t=>{
 pills.appendChild(mkEl("span",{cls:"pill",text:t}));
 });
 card.appendChild(pills);
@@ -399,7 +411,7 @@ const unlock=prog.unlockedStufe2||false;
 // Header
 const hdr=mkEl("div",{cls:"map-header"});
 hdr.appendChild(mkBtn("← Home","btn-back",()=>{screen="home";render();}));
-hdr.appendChild(mkEl("span",{html:"<b style='color:#4F46E5;font-size:17px'>π Kids Math Lerning</b>"}));
+hdr.appendChild(mkEl("span",{html:"<b style='color:#4F46E5;font-size:17px'>π Kids Math Learning</b>"}));
 hdr.appendChild(mkEl("span",{text:"⭐ "+Math.min(5,Math.floor(done.length/4))+"/5",style:{fontSize:"13px",fontWeight:"700",color:"#6366F1"}}));
 app.appendChild(hdr);
 
@@ -409,7 +421,7 @@ const doneS1=s1.filter(l=>done.includes(l.id)).length;
 const b1=mkEl("div",{cls:"stufe-block"});
 const h1=mkEl("div",{cls:"stufe-head"});
 h1.appendChild(mkEl("span",{cls:"stufe-tag",text:"Stufe 1"}));
-h1.appendChild(mkEl("span",{cls:"stufe-sub",text:"➕ ➖ Plus & Minus · 1–10"}));
+h1.appendChild(mkEl("span",{cls:"stufe-sub",text:"➕ ➖ Plus & Minus · 1–999"}));
 h1.appendChild(mkEl("span",{cls:"free-tag",text:"🆓 Kostenlos"}));
 b1.appendChild(h1);
 const g1=mkEl("div",{cls:"level-grid"});
@@ -445,7 +457,6 @@ const lb=mkEl("button",{cls:"lvl-btn"+(isDone?" lvl-done":locked?" lvl-locked":"
 if(locked){
 const lk=mkEl("span",{cls:"lock-icon",text:"🔒"});
 lb.appendChild(lk);
-// gesperrte Level: kein Click
 } else {
 lb.addEventListener("click",()=>startLevel(l));
 }
@@ -458,7 +469,7 @@ if(unlock){
 b2.appendChild(mkBar(doneS2,s2.length));
 b2.appendChild(mkEl("p",{cls:"prog-text",text:doneS2+" / "+s2.length+" abgeschlossen"}));
 } else {
-b2.appendChild(mkEl("p",{text:"Level 23–28 mit Pi freischalten",style:{fontSize:"13px",color:"#7C3AED",textAlign:"center",fontWeight:"600"}}));
+b2.appendChild(mkEl("p",{text:"Level 56–100 mit Pi freischalten",style:{fontSize:"13px",color:"#7C3AED",textAlign:"center",fontWeight:"600"}}));
 }
 app.appendChild(b2);
 }
@@ -472,7 +483,6 @@ curQ=makeQ(lv); screen="game"; render();
 function renderGame(){
 const card=mkEl("div",{cls:"card"});
 
-// Top
 const top=mkEl("div",{cls:"game-top"});
 const backBtn=mkBtn("← Karte","btn-back",()=>{
 screen="map"; render();
@@ -483,11 +493,14 @@ top.appendChild(mkEl("span",{text:(qNum+1)+"/"+Q_PER_LVL,style:{fontSize:"13px",
 card.appendChild(top);
 card.appendChild(mkBar(qNum,Q_PER_LVL));
 
-// Frage
 card.appendChild(mkEl("p",{cls:"q-label",text:"Was ist "+curQ.a+" "+curQ.op+" "+curQ.b+"?"}));
 
-// Visualisierung Plus
+const MAX_EMOJI=20;
+
 if(curQ.op==="+"){
+if(curQ.a>MAX_EMOJI || curQ.b>MAX_EMOJI){
+card.appendChild(mkEl("div",{cls:"big-calc",text:curQ.a+" + "+curQ.b+" = ?"}));
+} else {
 const g1=mkEl("div",{cls:"g-box"});
 g1.appendChild(mkEl("span",{cls:"g-label",text:"Gruppe 1"}));
 const eg1=mkEl("div",{cls:"emoji-grid"});
@@ -509,9 +522,12 @@ eg2.appendChild(s);
 }
 g2.appendChild(eg2);
 card.appendChild(g2);
-
-// Visualisierung Minus — alle zeigen, weggenommene ausgegraut
+}
 } else if(curQ.op==="-"){
+if(curQ.a>MAX_EMOJI){
+card.appendChild(mkEl("div",{cls:"big-calc",text:curQ.a+" − "+curQ.b+" = ?"}));
+card.appendChild(mkEl("p",{text:curQ.b+" wegnehmen — wie viele bleiben übrig? 🤔",style:{textAlign:"center",fontSize:"15px",color:"#64748B",fontWeight:"600"}}));
+} else {
 const gbox=mkEl("div",{cls:"g-box"});
 gbox.appendChild(mkEl("span",{cls:"g-label",text:curQ.b+" wegnehmen"}));
 const egrid=mkEl("div",{cls:"emoji-grid"});
@@ -529,12 +545,11 @@ egrid.appendChild(s);
 gbox.appendChild(egrid);
 card.appendChild(gbox);
 card.appendChild(mkEl("p",{text:"Wie viele bleiben übrig? 🤔",style:{textAlign:"center",fontSize:"15px",color:"#64748B",fontWeight:"600"}}));
-
+}
 } else {
 card.appendChild(mkEl("div",{cls:"big-calc",text:curQ.a+" "+curQ.op+" "+curQ.b+" = ?"}));
 }
 
-// Antwort-Buttons
 const ar=mkEl("div",{cls:"ans-row"});
 curQ.choices.forEach(c=>{
 const ab=mkEl("button",{cls:"ans-btn",text:String(c),click:()=>doAnswer(c)});
@@ -546,7 +561,6 @@ ar.appendChild(ab);
 });
 card.appendChild(ar);
 
-// Feedback
 const fbox=mkEl("div",{cls:"feedback "+(fb?"fb-"+(fb==="ok"?"ok":"no"):"fb-empty"),
 text:fb==="ok"?"🎉 Richtig! Toll gemacht!":fb==="no"?"😅 Fast! Die Antwort war "+curQ.ans:" "});
 card.appendChild(fbox);
@@ -619,7 +633,7 @@ function renderPay(){
 const card=mkEl("div",{cls:"card"});
 card.appendChild(mkEl("div",{text:"🔓",style:{fontSize:"52px",textAlign:"center"}}));
 card.appendChild(mkEl("h1",{text:"Stufe 2 freischalten",style:{fontSize:"22px"}}));
-card.appendChild(mkEl("p",{cls:"sub",text:"8 Level mit Mal & Geteilt. Level 21–22 kostenlos · Level 23–28 mit Pi freischalten.",style:{fontSize:"14px",lineHeight:"1.55"}}));
+card.appendChild(mkEl("p",{cls:"sub",text:"50 Level mit Mal & Geteilt. Level 51–55 kostenlos · Level 56–100 mit Pi freischalten.",style:{fontSize:"14px",lineHeight:"1.55"}}));
 
 function payOption(label,sub,amount,memo,isPurple){
 const o=mkEl("div",{cls:"pay-option"+(isPurple?" pay-best":"")});
@@ -655,7 +669,7 @@ return o;
 }
 
 card.appendChild(payOption("1 Level freischalten","Flexibel · zahle pro Level",0.5,"Kids Math Learning 1 Level",false));
-card.appendChild(payOption("⭐ Alle Level freischalten","6 Level · spare 40%",5,"Kids Math Learning Stufe 2 komplett",true));
+card.appendChild(payOption("⭐ Alle Level freischalten","45 Level · spare ca. 38%",14,"Kids Math Learning Stufe 2 komplett",true));
 
 if(payError) card.appendChild(mkEl("p",{text:"😅 "+payError,style:{textAlign:"center",fontSize:"13px",color:"#991B1B",fontWeight:"700",background:"#FEE2E2",padding:"10px",borderRadius:"12px"}}));
 if(!piUser) card.appendChild(mkEl("p",{text:"⚠️ Bitte zuerst mit Pi einloggen",style:{textAlign:"center",fontSize:"13px",color:"#F59E0B",fontWeight:"700"}}));
