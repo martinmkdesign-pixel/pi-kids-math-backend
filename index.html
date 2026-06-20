@@ -25,6 +25,27 @@ color: #EEF2FF; font-size: 17px; font-weight: 500; line-height: 1.6; max-width: 
 .splash-pi {
 font-size: 48px; margin-bottom: 24px; opacity: 0.85;
 }
+  .consent-overlay {
+position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+background: rgba(30, 27, 75, 0.55);
+display: flex; align-items: center; justify-content: center;
+z-index: 9998; padding: 16px;
+}
+.consent-box {
+background: #fff; border-radius: 24px; padding: 24px 20px; max-width: 420px; width: 100%;
+box-shadow: 0 8px 32px rgba(0,0,0,0.2); max-height: 88vh; overflow-y: auto;
+}
+.consent-title { font-size: 20px; font-weight: 800; color: #1E1B4B; text-align: center; margin-bottom: 10px; }
+.consent-text { font-size: 14px; color: #475569; line-height: 1.6; margin-bottom: 16px; }
+.consent-links { display: flex; gap: 8px; margin-bottom: 16px; }
+.consent-link-btn { flex: 1; background: #EEF2FF; color: #4F46E5; border-radius: 12px; padding: 10px; font-size: 13px; font-weight: 700; }
+.consent-check-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 18px; }
+.consent-check-row input { width: 20px; height: 20px; margin-top: 1px; flex-shrink: 0; }
+.consent-check-row label { font-size: 13px; color: #475569; line-height: 1.5; }
+.doc-screen { padding: 16px; }
+.doc-title { font-size: 18px; font-weight: 800; color: #1E1B4B; margin-bottom: 14px; }
+.doc-body { font-size: 13px; color: #475569; line-height: 1.7; white-space: pre-wrap; }
+
 @keyframes splashFadeOut {
 0% { opacity: 1; }
 80% { opacity: 1; }
@@ -104,6 +125,70 @@ button { cursor: pointer; border: none; font-family: inherit; font-size: 16px; }
 const SANDBOX = true;
 const BACKEND_URL = "https://marvelous-wisdom-production-1860.up.railway.app";
 const Q_PER_LVL = 5;
+  const TERMS_TEXT = `NUTZUNGSBEDINGUNGEN – KIDS MATH LEARNING
+
+1. Anbieter
+Martin Keßlinger, Itzehoe, Schleswig-Holstein
+
+2. Gegenstand
+Kids Math Learning ist ein Mathe-Lernspiel für Kinder. Die ersten 20 Level sind kostenlos. Weitere Level können optional über das Pi Network freigeschaltet werden.
+
+3. Zielgruppe und Verantwortung der Erziehungsberechtigten
+Die App richtet sich an Kinder im Vorschul- und Grundschulalter. Die Nutzung erfolgt unter Aufsicht der Erziehungsberechtigten. Die Pi-Zahlungsfunktion darf nur durch oder mit Zustimmung eines Erziehungsberechtigten genutzt werden.
+
+4. Testnet-Hinweis
+Die App läuft derzeit im Pi-Network-Testnet. Zahlungen erfolgen mit Test-Pi ohne realen Geldwert. Es entstehen keine echten Kosten.
+
+5. Leistungsbeschreibung
+Level 1–20: kostenlos. Level 21–22: kostenlos. Level 23–28: einzeln (0,5 π) oder gesammelt (5 π) freischaltbar. Preise und Funktionsumfang können angepasst werden.
+
+6. Zahlungsabwicklung
+Zahlungen laufen über die Pi-Network-Plattform. Der Anbieter hat auf deren Funktionsweise keinen Einfluss.
+
+7. Gewährleistung und Haftung
+Die App wird ohne Gewähr bereitgestellt. Haftung ist ausgeschlossen, soweit gesetzlich zulässig.
+
+8. Keine Finanzberatung
+Diese App stellt keine Finanz- oder Anlageberatung dar.
+
+9. Änderungen
+Diese Bedingungen können angepasst werden. Die aktuelle Fassung ist jederzeit in der App abrufbar.
+
+Dies ist ein Entwurf und stellt keine Rechtsberatung dar.`;
+
+const PRIVACY_TEXT = `DATENSCHUTZERKLÄRUNG – KIDS MATH LEARNING
+
+1. Verantwortlicher
+Martin Keßlinger, Itzehoe, Schleswig-Holstein
+
+2. Zielgruppe
+Diese App richtet sich an Kinder im Vorschul- und Grundschulalter. Die Zahlungsfunktion sollte nur durch Erziehungsberechtigte genutzt werden.
+
+3. Lokal gespeicherte Daten
+Spielfortschritt und Freischaltstatus werden ausschließlich lokal auf deinem Gerät gespeichert (localStorage) und nicht an unsere Server übertragen.
+
+4. Daten bei Pi-Zahlungen
+Bei Nutzung der Zahlungsfunktion werden Pi-Benutzername, Zahlungs-ID, Transaktions-ID und Betrag an unseren Server übermittelt, um die Zahlung über die Pi-Network-API zu verifizieren. Diese Daten werden ausschließlich zur Zahlungsabwicklung verwendet.
+
+5. Speicherdauer
+Zahlungsdaten liegen aktuell im Arbeitsspeicher des Servers und gehen bei einem Serverneustart verloren. Es gibt keine dauerhafte Datenbank.
+
+6. Pi Network
+Für die Datenverarbeitung durch das Pi Network selbst gilt deren eigene Datenschutzerklärung.
+
+7. Hosting
+Das Backend läuft bei Railway (USA). Technisch erforderliche Verbindungsdaten werden dort kurzzeitig verarbeitet.
+
+8. Keine Weitergabe an Dritte
+Es findet keine Weitergabe an Werbetreibende statt, außer der notwendigen Übermittlung an die Pi-Network-API.
+
+9. Rechte
+Nutzer bzw. deren Erziehungsberechtigte haben das Recht auf Auskunft, Löschung und Widerspruch.
+
+10. Kinder und Datenschutz
+Wir erheben wissentlich keine personenbezogenen Daten direkt von Kindern ohne Einbindung eines Erziehungsberechtigten.
+
+Dies ist ein Entwurf und stellt keine Rechtsberatung dar.`;
 const EMOJI_SETS = [
 ["🍎","🍓","🍊","🍋","🍇","🍒","🥝"],
 ["🐸","🐥","🐠","🦋","🐣","🐢","🦊"],
@@ -221,8 +306,57 @@ w.appendChild(f); return w;
 
 function render(){
 app.innerHTML="";
-({home:renderHome,map:renderMap,game:renderGame,done:renderDone,pay:renderPay,yay:renderYay}[screen]||renderHome)();
+({home:renderHome,map:renderMap,game:renderGame,done:renderDone,pay:renderPay,yay:renderYay,consent:renderConsent,terms:renderTerms,privacy:renderPrivacy}[screen]||renderHome)();
 }
+
+function renderConsent(){
+const ov=mkEl("div",{cls:"consent-overlay"});
+const box=mkEl("div",{cls:"consent-box"});
+box.appendChild(mkEl("div",{text:"📋",style:{fontSize:"44px",textAlign:"center",marginBottom:"8px"}}));
+box.appendChild(mkEl("div",{cls:"consent-title",text:"Bevor es losgeht"}));
+box.appendChild(mkEl("div",{cls:"consent-text",text:"Kids Math Learning ist ein Lernspiel für Kinder. Einige Level können optional mit Pi (aktuell Test-Pi, kein echtes Geld) freigeschaltet werden. Bitte lest euch die Nutzungsbedingungen und Datenschutzerklärung durch, am besten gemeinsam mit einem Erwachsenen."}));
+
+const links=mkEl("div",{cls:"consent-links"});
+links.appendChild(mkEl("button",{cls:"consent-link-btn",text:"📜 Nutzungsbedingungen",click:()=>{screen="terms";render();}}));
+links.appendChild(mkEl("button",{cls:"consent-link-btn",text:"🔒 Datenschutz",click:()=>{screen="privacy";render();}}));
+box.appendChild(links);
+
+const checkRow=mkEl("div",{cls:"consent-check-row"});
+const checkbox=document.createElement("input");
+checkbox.type="checkbox";
+checkbox.id="consent-checkbox";
+checkRow.appendChild(checkbox);
+const label=document.createElement("label");
+label.htmlFor="consent-checkbox";
+label.textContent="Ich habe die Nutzungsbedingungen und Datenschutzerklärung gelesen (oder mit einem Erwachsenen besprochen) und stimme zu.";
+checkRow.appendChild(label);
+box.appendChild(checkRow);
+
+const acceptBtn=mkBtn("✓ Akzeptieren und starten","btn-green",()=>{
+if(!checkbox.checked){
+acceptBtn.textContent="Bitte erst die Box ankreuzen ✋";
+setTimeout(()=>{acceptBtn.textContent="✓ Akzeptieren und starten";},1800);
+return;
+}
+try{localStorage.setItem("pkm4_consent","true");}catch{}
+screen="home"; render();
+});
+box.appendChild(acceptBtn);
+
+ov.appendChild(box);
+app.appendChild(ov);
+}
+
+function renderDocScreen(title, text){
+const card=mkEl("div",{cls:"card doc-screen"});
+card.appendChild(mkEl("div",{cls:"doc-title",text:title}));
+card.appendChild(mkEl("div",{cls:"doc-body",text:text}));
+card.appendChild(mkBtn("← Zurück","btn-back",()=>{screen="consent";render();}));
+app.appendChild(card);
+}
+
+function renderTerms(){ renderDocScreen("📜 Nutzungsbedingungen", TERMS_TEXT); }
+function renderPrivacy(){ renderDocScreen("🔒 Datenschutzerklärung", PRIVACY_TEXT); }
 
 // ── HOME ──────────────────────────────────────────────────────────────────────
 function renderHome(){
@@ -541,6 +675,9 @@ app.appendChild(card);
 
 // ── START ─────────────────────────────────────────────────────────────────────
 piInit();
+let hasConsent=false;
+try{hasConsent=localStorage.getItem("pkm4_consent")==="true";}catch{}
+screen = hasConsent ? "home" : "consent";
 render();
 </script>
 </body>
