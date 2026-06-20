@@ -71,24 +71,7 @@
   </style>
 </head>
 <body>
-  <div id="pi-login" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.95);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-<h2>Pi Kids Math</h2>
-<p>Bitte mit Pi einloggen um zu spielen</p>
-<button onclick="signIn()" style="background:#6366F1;color:#fff;padding:14px;border-radius:16px;font-size:17px;border:none;width:200px;">Mit Pi einloggen</button>
-</div>
-
-<script>
-function signIn() {
-Pi.authenticate(["username"], function(payment) {})
-.then(function(auth) {
-document.getElementById("pi-login").style.display = "none";
-window.piUser = auth.user.username;
-})
-.catch(function(err) {
-alert("Fehler: " + err.message);
-});
-}
-</script>
+  
 <div id="app"></div>
 <script>
 window.onerror = function(message, source, lineno, colno, error) {
