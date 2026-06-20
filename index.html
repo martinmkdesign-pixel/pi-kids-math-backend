@@ -138,7 +138,7 @@ function piInit(){} // Pi.init() wird bereits im <head> aufgerufen, nicht doppel
 async function piLogin(){
 if(!window.Pi){piUser={username:"test_nutzer"};return piUser;}
 return new Promise((res,rej)=>{
-window.Pi.authenticate(["username"],async inc=>{
+window.Pi.authenticate(["username","payments"],async inc=>{
 console.log("Unvollständige Zahlung gefunden:", inc);
 alert("Unvollständige Zahlung gefunden! paymentId="+inc.identifier+" - wird jetzt abgeschlossen...");
 try{
