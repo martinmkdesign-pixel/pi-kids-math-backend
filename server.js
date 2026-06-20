@@ -30,7 +30,7 @@ const payments = {};
 // amount = exakter Pi-Betrag, type = was nach erfolgreicher Zahlung freigeschaltet wird
 const PRICE_TABLE = [
 { amount: 0.5, type: 'single_level' },
-{ amount: 5, type: 'all_levels' }
+{ amount: 14, type: 'all_levels' }
 ];
 const AMOUNT_TOLERANCE = 0.0001; // Toleranz für Float-Vergleich
 
