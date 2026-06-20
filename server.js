@@ -1,6 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const PI_API_KEY = process.env.PI_API_KEY;
@@ -12,6 +13,16 @@ origin: ['https://golden-cobbler-2dc822.netlify.app', 'https://sandbox.minepi.co
 methods: ['GET', 'POST'],
 allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// ── RATE LIMITING ─────────────────────────────────────────────────────────────
+// Schützt /payments/* vor zu vielen Anfragen pro IP in kurzer Zeit
+const paymentLimiter = rateLimit({
+windowMs: 60 * 1000, // 1 Minute
+max: 20, // max. 20 Zahlungsanfragen pro Minute pro IP
+standardHeaders: true,
+legacyHeaders: false,
+message: { error: 'Zu viele Anfragen. Bitte versuch es in einer Minute noch einmal.' }
+});
 
 const payments = {};
 
@@ -29,10 +40,10 @@ return match ? match.type : null;
 }
 
 app.get('/', (req, res) => {
-res.json({ status: 'Pi Kids Math Backend läuft!', version: '1.1' });
+res.json({ status: 'Pi Kids Math Backend läuft!', version: '1.2' });
 });
 
-app.post('/payments/approve', async (req, res) => {
+app.post('/payments/approve', paymentLimiter, async (req, res) => {
 const { paymentId } = req.body;
 if (!paymentId) return res.status(400).json({ error: 'paymentId fehlt' });
 
@@ -76,7 +87,7 @@ res.status(500).json({ error: 'Fehler beim Genehmigen' });
 }
 });
 
-app.post('/payments/complete', async (req, res) => {
+app.post('/payments/complete', paymentLimiter, async (req, res) => {
 const { paymentId, txid } = req.body;
 if (!paymentId || !txid) return res.status(400).json({ error: 'Daten fehlen' });
 
