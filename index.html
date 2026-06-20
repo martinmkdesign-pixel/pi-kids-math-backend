@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Kids Math Learning – Mathe für Kinder</title>
+<title>Kids Math Learning</title>
 <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 <script>Pi.init({ version: "2.0", sandbox: true })</script>
 <style>
@@ -229,7 +229,7 @@ function renderHome(){
 const card=mkEl("div",{cls:"card"});
 
 card.appendChild(mkEl("div",{html:"🧮",style:{fontSize:"66px",textAlign:"center"}}));
-card.appendChild(mkEl("h1",{text:"Pi Lernen"}));
+card.appendChild(mkEl("h1",{text:"Kids Math Learning"}));
 card.appendChild(mkEl("p",{cls:"sub",text:"Mathe für Kinder — spielend leicht!"}));
 
 const pills=mkEl("div",{cls:"pills"});
@@ -265,7 +265,7 @@ const unlock=prog.unlockedStufe2||false;
 // Header
 const hdr=mkEl("div",{cls:"map-header"});
 hdr.appendChild(mkBtn("← Home","btn-back",()=>{screen="home";render();}));
-hdr.appendChild(mkEl("span",{html:"<b style='color:#4F46E5;font-size:17px'>π Pi Lernen</b>"}));
+hdr.appendChild(mkEl("span",{html:"<b style='color:#4F46E5;font-size:17px'>π Kids Math Lerning</b>"}));
 hdr.appendChild(mkEl("span",{text:"⭐ "+Math.min(5,Math.floor(done.length/4))+"/5",style:{fontSize:"13px",fontWeight:"700",color:"#6366F1"}}));
 app.appendChild(hdr);
 
