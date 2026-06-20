@@ -198,28 +198,6 @@ alert("createPayment Promise REJECTED: "+(e.message||JSON.stringify(e)));
 alert("SYNCHRONER Fehler bei createPayment: "+syncErr.message);
 }
 }
-alert("Approve fetch zurück, status="+res.status);
-} catch(e){ console.error('Approve error:', e); alert("Approve FEHLER: "+e.message); }
-},
-onReadyForServerCompletion: async (paymentId, txid) => {
-alert("onReadyForServerCompletion erreicht. txid="+txid);
-try {
-const res = await fetch(BACKEND_URL+'/payments/complete', {
-method:'POST',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({paymentId, txid})
-});
-const data = await res.json();
-alert("Complete Antwort: "+JSON.stringify(data));
-if(data.success && data.unlocked) onOk({txid, priceType:data.priceType});
-else console.error('Complete fehlgeschlagen:', data);
-} catch(e){ console.error('Complete error:', e); alert("Complete FEHLER: "+e.message); }
-},
-onCancel: (pid) => { console.log('Abgebrochen:', pid); alert("Zahlung ABGEBROCHEN: "+pid); },
-onError: (err) => { console.error('Fehler:', err); alert("Pi createPayment FEHLER: "+err.message); }
-});
-}
-
 // ── STATE ─────────────────────────────────────────────────────────────────────
 let screen="home",curLevel=null,curQ=null,qNum=0,hits=0,sel=null,fb=null,bouncing=false;
 let answerLocked=false;
