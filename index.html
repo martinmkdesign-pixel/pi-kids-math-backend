@@ -91,7 +91,14 @@ alert("Fehler: " + err.message);
 </script>
 <div id="app"></div>
 <script>
-// ── KONFIGURATION ─────────────────────────────────────────────────────────────
+window.onerror = function(message, source, lineno, colno, error) {
+alert("GLOBALER FEHLER: " + message + " | Zeile: " + lineno + ":" + colno);
+return false;
+};
+window.addEventListener('unhandledrejection', function(event) {
+alert("UNBEHANDELTE PROMISE REJECTION: " + (event.reason && event.reason.message ? event.reason.message : JSON.stringify(event.reason)));
+});
+  // ── KONFIGURATION ─────────────────────────────────────────────────────────────
 const SANDBOX   = true;
   const BACKEND_URL = "https://marvelous-wisdom-production-1860.up.railway.app";
 const Q_PER_LVL = 5;
