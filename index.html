@@ -129,12 +129,29 @@ function saveProg(){try{localStorage.setItem("pkm4",JSON.stringify(prog));}catch
 let piUser=null;
 function piInit(){} // Pi.init() wird bereits im <head> aufgerufen, nicht doppelt initialisieren
 async function piLogin(){
-  if(!window.Pi){piUser={username:"test_nutzer"};return piUser;}
-  return new Promise((res,rej)=>{
-    window.Pi.authenticate(["username"],inc=>{
-      console.log("Unvollständige Zahlung:", inc);
-    }).then(a=>{piUser=a.user;res(a.user);}).catch(rej);
-  });
+if(!window.Pi){piUser={username:"test_nutzer"};return piUser;}
+return new Promise((res,rej)=>{
+window.Pi.authenticate(["username"],async inc=>{
+console.log("Unvollständige Zahlung gefunden:", inc);
+alert("Unvollständige Zahlung gefunden! paymentId="+inc.identifier+" - wird jetzt abgeschlossen...");
+try{
+const txid = inc.transaction ? inc.transaction.txid : null;
+if(txid){
+const r = await fetch(BACKEND_URL+'/payments/complete', {
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({paymentId: inc.identifier, txid})
+});
+const d = await r.json();
+alert("Alte Zahlung abgeschlossen: "+JSON.stringify(d));
+} else {
+alert("Keine txid vorhanden, kann alte Zahlung nicht abschließen.");
+}
+}catch(e){
+alert("Fehler beim Abschließen der alten Zahlung: "+e.message);
+}
+}).then(a=>{piUser=a.user;res(a.user);}).catch(rej);
+});
 }
 async function piPay(amount,memo,onOk){
 alert("piPay gestartet. amount="+amount+" window.Pi vorhanden="+(!!window.Pi));
