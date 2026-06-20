@@ -127,7 +127,7 @@ function saveProg(){try{localStorage.setItem("pkm4",JSON.stringify(prog));}catch
 
 // ── PI SDK ────────────────────────────────────────────────────────────────────
 let piUser=null;
-function piInit(){if(window.Pi)window.Pi.init({version:"2.0",sandbox:SANDBOX});}
+function piInit(){} // Pi.init() wird bereits im <head> aufgerufen, nicht doppelt initialisieren
 async function piLogin(){
   if(!window.Pi){piUser={username:"test_nutzer"};return piUser;}
   return new Promise((res,rej)=>{
