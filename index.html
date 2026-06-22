@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>Kids Math Learning</title>
 <script src="https://sdk.minepi.com/pi-sdk.js"></script>
-<script>Pi.init({ version: "2.0", sandbox: true })</script>
 <style>
 .splash-screen {
 position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -233,25 +232,51 @@ function saveProg(){try{localStorage.setItem("pkm4",JSON.stringify(prog));}catch
 
 // ── PI SDK ────────────────────────────────────────────────────────────────────
 let piUser=null;
-function piInit(){} // Pi.init() wird bereits im <head> aufgerufen, nicht doppelt initialisieren
+let piInitialized = null;
+function piInit(){
+  if(!window.Pi) return Promise.resolve(false);
+  if(!piInitialized) piInitialized = Pi.init({ version: "2.0", sandbox: SANDBOX });
+  return Promise.resolve(piInitialized);
+}
+
 async function piLogin(){
-if(!window.Pi){piUser={username:"test_nutzer"};return piUser;}
-return new Promise((res,rej)=>{
-window.Pi.authenticate(["username","payments"],async inc=>{
-try{
-const txid = inc.transaction ? inc.transaction.txid : null;
-if(txid){
-await fetch(BACKEND_URL+'/payments/complete', {
-method:'POST',
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({paymentId: inc.identifier, txid})
-});
-}
-}catch(e){
-console.error('Fehler beim Abschließen einer offenen Zahlung:', e);
-}
-}).then(a=>{piUser=a.user;res(a.user);}).catch(rej);
-});
+  if(!window.Pi){ piUser={username:"test_nutzer"}; return piUser; }
+  await piInit(); // Pi.init vollständig abwarten, bevor authenticate läuft
+  return new Promise((res,rej)=>{
+    window.Pi.authenticate(["username","payments"], async inc=>{
+      try{
+        const txid = inc.transaction ? inc.transaction.txid : null;
+        if(txid){
+          await fetch(BACKEND_URL+'/payments/complete', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({paymentId: inc.identifier, txid})
+          });
+        }
+      }catch(e){
+        console.error('Fehler beim Abschließen einer offenen Zahlung:', e);
+      }
+    }).then(async a=>{
+      try{
+        const verifyRes = await fetch(BACKEND_URL+'/auth/verify', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({ accessToken: a.accessToken })
+        });
+        const verifyData = await verifyRes.json();
+        if(verifyData.success){
+          piUser = a.user;
+          res(piUser);
+        } else {
+          console.error('Token-Validierung fehlgeschlagen:', verifyData);
+          rej(new Error('Token ungültig'));
+        }
+      }catch(e){
+        console.error('Fehler bei Backend-Validierung:', e);
+        rej(e);
+      }
+    }).catch(rej);
+  });
 }
 async function piPay(amount,memo,onOk,onFail){
 if(!window.Pi){setTimeout(()=>onOk({txid:"test_"+Date.now(),priceType:amount>=14?"all_levels":"single_level"}),1200);return;}
@@ -688,11 +713,16 @@ app.appendChild(card);
 }
 
 // ── START ─────────────────────────────────────────────────────────────────────
-piInit();
-let hasConsent=false;
-try{hasConsent=localStorage.getItem("pkm4_consent")==="true";}catch{}
-screen = hasConsent ? "home" : "consent";
-render();
+(async function start(){
+  await piInit();
+  let hasConsent=false;
+  try{hasConsent=localStorage.getItem("pkm4_consent")==="true";}catch{}
+  if(window.Pi && hasConsent){
+    try{ await piLogin(); }catch(e){ console.log('Auto-Login nicht möglich, Button bleibt verfügbar.', e); }
+  }
+  screen = hasConsent ? "home" : "consent";
+  render();
+})();
 </script>
 </body>
 </html>
