@@ -118,4 +118,18 @@ res.status(500).json({ error: 'Fehler beim Abschließen' });
 }
 });
 
+app.post('/auth/verify', async (req, res) => {
+  const { accessToken } = req.body;
+  if (!accessToken) return res.status(400).json({ error: 'accessToken fehlt' });
+
+  try {
+    const response = await axios.get('https://api.minepi.com/v2/me', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    res.json({ success: true, user: response.data });
+  } catch (error) {
+    console.error('Auth-Verify error:', error.response?.data || error.message);
+    res.status(401).json({ error: 'Ungültiger Token' });
+  }
+});
 app.listen(PORT, () => console.log(`Server läuft auf Port ${PORT}`));
