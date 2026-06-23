@@ -237,6 +237,14 @@ function saveProg(){try{localStorage.setItem("pkm4",JSON.stringify(prog));}catch
 // ── PI SDK ────────────────────────────────────────────────────────────────────
 let piUser=null;
 let piInitialized = null;
+
+function withTimeout(promise, ms){
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(()=>reject(new Error('Zeitüberschreitung nach '+ms+'ms')), ms))
+  ]);
+}
+
 function piInit(){
   if(!window.Pi) return Promise.resolve(false);
   try{
@@ -427,7 +435,7 @@ card.appendChild(ub);
 let busy=false;
 const lb=mkEl("button",{cls:"btn-pi",text:"π Mit Pi einloggen",click:async()=>{
 if(busy)return; busy=true; lb.textContent="Verbinde...";
-try{ await piLogin(); }catch(e){ console.error('Login fehlgeschlagen:', e); }
+try{ await withTimeout(piLogin(), 8000); }catch(e){ console.error('Login fehlgeschlagen:', e); }
 busy=false; render();
 }});
 card.appendChild(lb);
@@ -679,7 +687,7 @@ o.appendChild(info);
 let busy=false;
 const pb=mkEl("button",{cls:"pay-small-btn",text:amount+" π",click:async()=>{
 if(busy)return; busy=true; pb.textContent="⏳..."; payError=null;
-if(!piUser){try{await piLogin();}catch(e){console.error('Login fehlgeschlagen:', e);}}
+if(!piUser){try{await withTimeout(piLogin(), 8000);}catch(e){console.error('Login fehlgeschlagen:', e);}}
 await piPay(amount,memo,(result)=>{
 if(result.priceType==="all_levels"){
 prog.unlockedStufe2=true;
@@ -723,16 +731,23 @@ app.appendChild(card);
 }
 
 // ── START ─────────────────────────────────────────────────────────────────────
-(async function start(){
-  try{ await piInit(); }catch(e){ console.error('piInit Fehler im Start-Block:', e); }
-  let hasConsent=false;
-  try{hasConsent=localStorage.getItem("pkm4_consent")==="true";}catch{}
-  if(window.Pi && hasConsent){
-    try{ await piLogin(); }catch(e){ console.log('Auto-Login nicht möglich, Button bleibt verfügbar.', e); }
+let hasConsent=false;
+try{hasConsent=localStorage.getItem("pkm4_consent")==="true";}catch{}
+screen = hasConsent ? "home" : "consent";
+render(); // App sofort anzeigen – unabhängig davon, ob/wie lange Pi im Hintergrund braucht
+
+(async function tryPiAutoLogin(){
+  try{
+    await withTimeout(piInit(), 5000);
+    if(window.Pi && hasConsent){
+      await withTimeout(piLogin(), 8000);
+      render(); // nur erneut rendern, wenn der Login tatsächlich geklappt hat
+    }
+  }catch(e){
+    console.log('Pi-Initialisierung/Auto-Login nicht möglich (z.B. kein echter Pi Browser, oder Zeitüberschreitung):', e);
   }
-  screen = hasConsent ? "home" : "consent";
-  render();
 })();
+
 </script>
 </body>
 </html>
