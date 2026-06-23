@@ -239,8 +239,13 @@ let piUser=null;
 let piInitialized = null;
 function piInit(){
   if(!window.Pi) return Promise.resolve(false);
-  if(!piInitialized) piInitialized = Pi.init({ version: "2.0", sandbox: SANDBOX });
-  return Promise.resolve(piInitialized);
+  try{
+    if(!piInitialized) piInitialized = Pi.init({ version: "2.0", sandbox: SANDBOX });
+    return Promise.resolve(piInitialized);
+  }catch(e){
+    console.error('Pi.init fehlgeschlagen (vermutlich kein echter Pi Browser):', e);
+    return Promise.resolve(false);
+  }
 }
 
 async function piLogin(){
@@ -422,7 +427,8 @@ card.appendChild(ub);
 let busy=false;
 const lb=mkEl("button",{cls:"btn-pi",text:"π Mit Pi einloggen",click:async()=>{
 if(busy)return; busy=true; lb.textContent="Verbinde...";
-await piLogin(); render();
+try{ await piLogin(); }catch(e){ console.error('Login fehlgeschlagen:', e); }
+busy=false; render();
 }});
 card.appendChild(lb);
 }
@@ -673,7 +679,7 @@ o.appendChild(info);
 let busy=false;
 const pb=mkEl("button",{cls:"pay-small-btn",text:amount+" π",click:async()=>{
 if(busy)return; busy=true; pb.textContent="⏳..."; payError=null;
-if(!piUser){await piLogin();}
+if(!piUser){try{await piLogin();}catch(e){console.error('Login fehlgeschlagen:', e);}}
 await piPay(amount,memo,(result)=>{
 if(result.priceType==="all_levels"){
 prog.unlockedStufe2=true;
@@ -718,7 +724,7 @@ app.appendChild(card);
 
 // ── START ─────────────────────────────────────────────────────────────────────
 (async function start(){
-  await piInit();
+  try{ await piInit(); }catch(e){ console.error('piInit Fehler im Start-Block:', e); }
   let hasConsent=false;
   try{hasConsent=localStorage.getItem("pkm4_consent")==="true";}catch{}
   if(window.Pi && hasConsent){
