@@ -437,6 +437,10 @@ const ub=mkEl("div",{cls:"user-badge"});
 ub.appendChild(mkEl("span",{text:"π"}));
 ub.appendChild(mkEl("span",{text:piUser.username}));
 card.appendChild(ub);
+card.appendChild(mkBtn("Abmelden","btn-back",()=>{
+piUser=null;
+render();
+}));
 } else {
 let busy=false;
 const lb=mkEl("button",{cls:"btn-pi",text:"π Mit Pi einloggen",click:async()=>{
@@ -533,10 +537,17 @@ function renderGame(){
 const card=mkEl("div",{cls:"card"});
 
 const top=mkEl("div",{cls:"game-top"});
+const leftGroup=mkEl("div",{style:{display:"flex",gap:"4px"}});
 const backBtn=mkBtn("← Karte","btn-back",()=>{
 screen="map"; render();
 });
-top.appendChild(backBtn);
+const homeBtn=mkBtn("🏠","btn-back",()=>{
+screen="home"; render();
+});
+homeBtn.style.minWidth="40px";
+leftGroup.appendChild(backBtn);
+leftGroup.appendChild(homeBtn);
+top.appendChild(leftGroup);
 top.appendChild(mkEl("span",{cls:"lvl-badge",text:"Level "+curLevel.id}));
 top.appendChild(mkEl("span",{text:(qNum+1)+"/"+Q_PER_LVL,style:{fontSize:"13px",fontWeight:"700",color:"#6366F1"}}));
 card.appendChild(top);
