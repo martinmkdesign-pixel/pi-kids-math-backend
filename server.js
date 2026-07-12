@@ -101,6 +101,20 @@ function sanitizeNickname(name) {
   return clean.length >= 3 ? clean : null;
 }
 
+// ---------- Login-Verifizierung (wie in der Vorversion) ----------
+// Das Frontend meldet sich nach Pi.authenticate hier, um das
+// Access Token serverseitig zu bestätigen.
+app.post("/auth/verify", async (req, res) => {
+  try {
+    const { accessToken } = req.body;
+    if (!accessToken) return res.status(400).json({ error: "accessToken fehlt" });
+    const user = await verifyUser(accessToken);
+    res.json({ ok: true, uid: user.uid, username: user.username });
+  } catch (e) {
+    console.error("auth/verify:", e.message);
+    res.status(401).json({ error: "Verifizierung fehlgeschlagen" });
+  }
+});
 // ---------- Zahlungs-Endpunkte (Ablauf wie bisher) ----------
 
 // Schritt 1: Zahlung freigeben
