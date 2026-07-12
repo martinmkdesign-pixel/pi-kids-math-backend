@@ -201,13 +201,14 @@ Spielfortschritt und Freischaltstatus werden ausschließlich lokal auf deinem Ge
 Bei Nutzung der Zahlungsfunktion werden Pi-Benutzername, Zahlungs-ID, Transaktions-ID und Betrag an unseren Server übermittelt, um die Zahlung über die Pi-Network-API zu verifizieren. Diese Daten werden ausschließlich zur Zahlungsabwicklung verwendet.
 
 5. Speicherdauer
-Zahlungsdaten liegen aktuell im Arbeitsspeicher des Servers und gehen bei einem Serverneustart verloren. Es gibt keine dauerhafte Datenbank.
+Zahlungsdaten (Pi-Benutzername, Zahlungs-ID, Transaktions-ID und Betrag) werden in einer Datenbank gespeichert, um Zahlungen nachvollziehen und offene Zahlungen abschließen zu können. Die Daten werden so lange aufbewahrt, wie es für diese Zwecke sowie 
+zur Erfüllung gesetzlicher Aufbewahrungspflichten erforderlich ist. Löschanfragen können jederzeit an die oben genannte E-Mail-Adresse gerichtet werden.
 
 6. Pi Network
 Für die Datenverarbeitung durch das Pi Network selbst gilt deren eigene Datenschutzerklärung.
 
 7. Hosting
-Das Backend läuft bei Railway (USA). Technisch erforderliche Verbindungsdaten werden dort kurzzeitig verarbeitet.
+Das Backend und die Datenbank laufen beide bei Railway (USA). Technisch erforderliche Verbindungsdaten werden dort kurzzeitig verarbeitet.
 
 8. Keine Weitergabe an Dritte
 Es findet keine Weitergabe an Werbetreibende statt, außer der notwendigen Übermittlung an die Pi-Network-API.
@@ -218,7 +219,6 @@ Nutzer bzw. deren Erziehungsberechtigte haben das Recht auf Auskunft, Löschung 
 10. Kinder und Datenschutz
 Wir erheben wissentlich keine personenbezogenen Daten direkt von Kindern ohne Einbindung eines Erziehungsberechtigten.
 
-Dies ist ein Entwurf und stellt keine Rechtsberatung dar.`;
 const EMOJI_SETS = [
 ["🍎","🍓","🍊","🍋","🍇","🍒","🥝"],
 ["🐸","🐥","🐠","🦋","🐣","🐢","🦊"],
