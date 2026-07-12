@@ -1,13 +1,24 @@
 // ============================================================
-// MatheInnova Backend – server.js
+// MatheInnova Backend – server.js (FINAL, abgeglichen)
 // Express + Pi Platform API + PostgreSQL (Railway)
 // ============================================================
-// Neu gegenüber der Vorversion:
-//  - PostgreSQL statt Arbeitsspeicher (Zahlungen überleben Neustarts)
-//  - Bestenliste: POST /score und GET /leaderboard
-//  - GET /unlocks: gekaufte Freischaltungen wiederherstellen
-// Die bestehenden Zahlungs-Endpunkte (/approve, /complete) und der
-// Ablauf sind unverändert – nur die Speicherung ist jetzt persistent.
+// Kombiniert das ALTE Verhalten (das die index.html erwartet):
+//  - Pfade /payments/approve und /payments/complete
+//  - Antwortformat { success, paymentId, txid, priceType, unlocked }
+//  - Preisvalidierung über PRICE_TABLE
+//  - CORS-Whitelist und Rate-Limiting auf Zahlungs-Endpunkten
+//  - Schutz gegen Doppelverarbeitung
+// mit der NEUEN Logik:
+//  - PostgreSQL statt Arbeitsspeicher (Tabellen: unlocks, players)
+//  - /auth/verify (jetzt mit success:true – das Frontend prüft darauf!)
+//  - /unlocks, /score, /leaderboard, /incomplete
+//
+// WICHTIG:
+//  - PRICE_TABLE ist auf die AKTUELLEN Frontend-Preise angepasst:
+//    0.5 π (1 Level) und 14 π (alle Level). Die alte server.js hatte
+//    noch 5 π – das passt nicht mehr zur index.html.
+//  - Keine zusätzlichen Abhängigkeiten nötig: nur express, cors, pg.
+//    (axios und express-rate-limit werden NICHT mehr gebraucht.)
 // ============================================================
 
 const express = require("express");
@@ -16,24 +27,80 @@ const path = require("path");
 const { Pool } = require("pg");
 
 const app = express();
-app.use(cors());
-app.use(express.json());
-
-// Frontend (index.html, validation-key.txt) weiterhin direkt ausliefern
-app.use(express.static(__dirname));
-
-// ---------- Konfiguration ----------
-const PI_API_KEY = process.env.PI_API_KEY; // wie bisher als Railway-Variable
-const PI_API = "https://api.minepi.com/v2";
 const PORT = process.env.PORT || 3000;
+const PI_API_KEY = process.env.PI_API_KEY; // Railway-Variable, wie bisher
+const PI_API = "https://api.minepi.com/v2";
 
 if (!PI_API_KEY) {
   console.warn("WARNUNG: PI_API_KEY ist nicht gesetzt – Zahlungen werden fehlschlagen.");
 }
 
-// ---------- Datenbank ----------
-// DATABASE_URL stellt Railway automatisch bereit, sobald die
-// Postgres-Datenbank mit dem Service verknüpft ist.
+// Railway läuft hinter einem Proxy – nötig, damit req.ip die echte
+// Client-IP für das Rate-Limiting liefert.
+app.set("trust proxy", 1);
+
+app.use(express.json());
+
+// Frontend (index.html, validation-key.txt) direkt ausliefern
+app.use(express.static(__dirname));
+
+// CORS-Whitelist (wie in der alten Version)
+app.use(cors({
+  origin: [
+    "https://golden-cobbler-2dc822.netlify.app",
+    "https://sandbox.minepi.com",
+    "https://marvelous-wisdom-production-1860.up.railway.app"
+  ],
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
+// ── RATE LIMITING ─────────────────────────────────────────────────────────────
+// Schützt die Zahlungs-Endpunkte vor zu vielen Anfragen pro IP.
+// Eigene Mini-Implementierung ohne Zusatzpaket (max. 20 Anfragen / Minute / IP).
+const RL_WINDOW_MS = 60 * 1000;
+const RL_MAX = 20;
+const rlBuckets = new Map();
+
+function paymentLimiter(req, res, next) {
+  const now = Date.now();
+  const ip = req.ip || "unknown";
+  let b = rlBuckets.get(ip);
+  if (!b || now > b.reset) {
+    b = { count: 0, reset: now + RL_WINDOW_MS };
+    rlBuckets.set(ip, b);
+  }
+  b.count++;
+  if (b.count > RL_MAX) {
+    return res.status(429).json({ error: "Zu viele Anfragen. Bitte versuch es in einer Minute noch einmal." });
+  }
+  next();
+}
+
+// Abgelaufene Einträge regelmäßig aufräumen
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, b] of rlBuckets) {
+    if (now > b.reset) rlBuckets.delete(ip);
+  }
+}, 5 * 60 * 1000);
+
+// ── PREIS-KONFIGURATION ──────────────────────────────────────────────────────
+// An die aktuellen Frontend-Preise angepasst (index.html):
+//   0.5 π  -> 1 Level  ("single_level")
+//   14 π   -> alle Level ("all_levels")
+const PRICE_TABLE = [
+  { amount: 0.5, type: "single_level", product: "level" },
+  { amount: 14,  type: "all_levels",   product: "all" }
+];
+const AMOUNT_TOLERANCE = 0.0001; // Toleranz für Float-Vergleich
+
+function resolvePrice(amount) {
+  return PRICE_TABLE.find(p => Math.abs(p.amount - amount) < AMOUNT_TOLERANCE) || null;
+}
+
+// ── DATENBANK ────────────────────────────────────────────────────────────────
+// DATABASE_URL stellt Railway automatisch bereit.
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes("railway")
@@ -42,12 +109,12 @@ const pool = new Pool({
 });
 
 async function initDb() {
-  // Freischaltungen (ersetzt das bisherige In-Memory-Objekt)
+  // Freischaltungen (ersetzt das frühere In-Memory-Objekt)
   await pool.query(`
     CREATE TABLE IF NOT EXISTS unlocks (
       id          SERIAL PRIMARY KEY,
       uid         TEXT NOT NULL,
-      product     TEXT NOT NULL,           -- z.B. "level" oder "all"
+      product     TEXT NOT NULL,           -- "level" oder "all"
       memo        TEXT,
       payment_id  TEXT UNIQUE,
       txid        TEXT,
@@ -67,7 +134,7 @@ async function initDb() {
   console.log("Datenbank bereit.");
 }
 
-// ---------- Hilfsfunktionen ----------
+// ── HILFSFUNKTIONEN ──────────────────────────────────────────────────────────
 async function piRequest(endpoint, method, body) {
   const res = await fetch(`${PI_API}${endpoint}`, {
     method,
@@ -79,12 +146,15 @@ async function piRequest(endpoint, method, body) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(`Pi API ${endpoint} -> ${res.status}: ${JSON.stringify(data)}`);
+    const err = new Error(`Pi API ${endpoint} -> ${res.status}: ${JSON.stringify(data)}`);
+    err.status = res.status;
+    err.data = data;
+    throw err;
   }
   return data;
 }
 
-// Access Token des Nutzers gegen die Pi API prüfen (für Bestenliste).
+// Access Token des Nutzers gegen die Pi API prüfen.
 // Gibt { uid, username } zurück oder wirft einen Fehler.
 async function verifyUser(accessToken) {
   const res = await fetch(`${PI_API}/me`, {
@@ -101,65 +171,124 @@ function sanitizeNickname(name) {
   return clean.length >= 3 ? clean : null;
 }
 
-// ---------- Login-Verifizierung (wie in der Vorversion) ----------
-// Das Frontend meldet sich nach Pi.authenticate hier, um das
-// Access Token serverseitig zu bestätigen.
+// priceType aus einem DB-Eintrag ableiten (für idempotente Antworten)
+function priceTypeFromProduct(product) {
+  return product === "all" ? "all_levels" : "single_level";
+}
+
+// ── STATUS / FRONTEND ────────────────────────────────────────────────────────
+// Die App wird direkt von Railway ausgeliefert (Pi Browser lädt diese URL).
+app.get("/", (_req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+// Status-Check wie früher unter GET / – jetzt unter /health
+app.get("/health", (_req, res) => {
+  res.json({ status: "MatheInnova Backend läuft!", version: "2.1" });
+});
+
+// ── LOGIN-VERIFIZIERUNG ──────────────────────────────────────────────────────
+// Das Frontend prüft auf verifyData.success – deshalb success:true!
+// (ok:true bleibt zusätzlich erhalten, falls anderswo darauf geprüft wird.)
 app.post("/auth/verify", async (req, res) => {
   try {
     const { accessToken } = req.body;
-    if (!accessToken) return res.status(400).json({ error: "accessToken fehlt" });
+    if (!accessToken) return res.status(400).json({ success: false, error: "accessToken fehlt" });
     const user = await verifyUser(accessToken);
-    res.json({ ok: true, uid: user.uid, username: user.username });
+    res.json({ success: true, ok: true, uid: user.uid, username: user.username });
   } catch (e) {
     console.error("auth/verify:", e.message);
-    res.status(401).json({ error: "Verifizierung fehlgeschlagen" });
+    res.status(401).json({ success: false, error: "Verifizierung fehlgeschlagen" });
   }
 });
-// ---------- Zahlungs-Endpunkte (Ablauf wie bisher) ----------
 
-// Schritt 1: Zahlung freigeben
-app.post("/approve", async (req, res) => {
+// ── ZAHLUNGS-ENDPUNKTE ───────────────────────────────────────────────────────
+// Pfade wie in der alten Version (/payments/...), da die index.html diese
+// aufruft. Die kurzen Pfade (/approve, /complete) bleiben als Alias bestehen.
+
+// Schritt 1: Zahlung prüfen und freigeben
+async function handleApprove(req, res) {
+  const { paymentId } = req.body;
+  if (!paymentId) return res.status(400).json({ error: "paymentId fehlt" });
+
   try {
-    const { paymentId } = req.body;
-    if (!paymentId) return res.status(400).json({ error: "paymentId fehlt" });
+    // Zahlungsdaten von Pi holen und Betrag validieren
+    const payment = await piRequest(`/payments/${paymentId}`, "GET");
+    const price = resolvePrice(payment.amount);
+    if (!price) {
+      console.warn(`Unbekannter Betrag bei Payment ${paymentId}: ${payment.amount} π`);
+      return res.status(400).json({ error: "Ungültiger Zahlungsbetrag" });
+    }
+
+    // Bereits genehmigt oder abgeschlossen? Nicht doppelt verarbeiten.
+    const st = payment.status || {};
+    if (st.developer_approved || st.developer_completed) {
+      return res.json({
+        success: true, paymentId, amount: payment.amount,
+        priceType: price.type, alreadyProcessed: true
+      });
+    }
+
     await piRequest(`/payments/${paymentId}/approve`, "POST");
-    res.json({ ok: true });
+    res.json({ success: true, paymentId, amount: payment.amount, priceType: price.type });
   } catch (e) {
     console.error("approve:", e.message);
-    res.status(500).json({ error: "Approve fehlgeschlagen" });
+    res.status(500).json({ error: "Fehler beim Genehmigen" });
   }
-});
+}
+app.post("/payments/approve", paymentLimiter, handleApprove);
+app.post("/approve", paymentLimiter, handleApprove); // Alias
 
 // Schritt 2: Zahlung abschließen + Freischaltung DAUERHAFT speichern
-app.post("/complete", async (req, res) => {
-  try {
-    const { paymentId, txid } = req.body;
-    if (!paymentId || !txid) return res.status(400).json({ error: "paymentId/txid fehlt" });
+async function handleComplete(req, res) {
+  const { paymentId, txid } = req.body;
+  if (!paymentId || !txid) return res.status(400).json({ error: "Daten fehlen" });
 
-    // Erst bei Pi abschließen …
+  try {
+    // Schon in der Datenbank? -> idempotent antworten (Doppel-Schutz)
+    const existing = await pool.query(
+      `SELECT product FROM unlocks WHERE payment_id = $1`, [paymentId]
+    );
+    if (existing.rows.length > 0) {
+      return res.json({
+        success: true, paymentId, txid,
+        priceType: priceTypeFromProduct(existing.rows[0].product),
+        unlocked: true, alreadyProcessed: true
+      });
+    }
+
+    // Bei Pi abschließen – die Antwort enthält das Payment-Objekt
     const payment = await piRequest(`/payments/${paymentId}/complete`, "POST", { txid });
 
-    // … dann in der Datenbank festhalten (idempotent dank UNIQUE auf payment_id)
-    const uid = payment.user_uid;
-    const memo = payment.memo || "";
-    const amount = payment.amount || null;
-    const product = memo.toLowerCase().includes("komplett") ? "all" : "level";
+    // priceType primär über den Betrag bestimmen, Memo als Fallback
+    const amount = payment.amount ?? null;
+    let price = amount !== null ? resolvePrice(amount) : null;
+    if (!price) {
+      const memo = (payment.memo || "").toLowerCase();
+      price = memo.includes("komplett") ? PRICE_TABLE[1] : PRICE_TABLE[0];
+      console.warn(`Payment ${paymentId}: Betrag ${amount} π nicht in PRICE_TABLE, Fallback über Memo -> ${price.type}`);
+    }
 
+    // In der Datenbank festhalten (idempotent dank UNIQUE auf payment_id)
     await pool.query(
       `INSERT INTO unlocks (uid, product, memo, payment_id, txid, amount)
        VALUES ($1,$2,$3,$4,$5,$6)
        ON CONFLICT (payment_id) DO NOTHING`,
-      [uid, product, memo, paymentId, txid, amount]
+      [payment.user_uid, price.product, payment.memo || "", paymentId, txid, amount]
     );
 
-    res.json({ ok: true });
+    res.json({ success: true, paymentId, txid, priceType: price.type, unlocked: true });
   } catch (e) {
     console.error("complete:", e.message);
-    res.status(500).json({ error: "Complete fehlgeschlagen" });
+    res.status(500).json({ error: "Fehler beim Abschließen" });
   }
-});
+}
+app.post("/payments/complete", paymentLimiter, handleComplete);
+app.post("/complete", paymentLimiter, handleComplete); // Alias
 
-// Unvollständige Zahlungen abschließen (Pi ruft das beim App-Start auf)
+// Unvollständige Zahlungen abschließen (falls Pi das beim App-Start aufruft).
+// Hinweis: Die aktuelle index.html schickt offene Zahlungen an
+// /payments/complete – dieser Endpunkt bleibt als Absicherung bestehen.
 app.post("/incomplete", async (req, res) => {
   try {
     const { payment } = req.body;
@@ -168,15 +297,15 @@ app.post("/incomplete", async (req, res) => {
         txid: payment.transaction.txid,
       });
     }
-    res.json({ ok: true });
+    res.json({ ok: true, success: true });
   } catch (e) {
     console.error("incomplete:", e.message);
-    res.json({ ok: true }); // nicht blockieren
+    res.json({ ok: true, success: true }); // nicht blockieren
   }
 });
 
-// ---------- Freischaltungen wiederherstellen ----------
-// Das Frontend kann damit nach Login gekaufte Inhalte abrufen –
+// ── FREISCHALTUNGEN WIEDERHERSTELLEN ─────────────────────────────────────────
+// Das Frontend kann damit nach dem Login gekaufte Inhalte abrufen –
 // unabhängig von Gerät oder Browser-Cache.
 app.post("/unlocks", async (req, res) => {
   try {
@@ -186,17 +315,16 @@ app.post("/unlocks", async (req, res) => {
       `SELECT product, memo, created_at FROM unlocks WHERE uid = $1 ORDER BY created_at`,
       [user.uid]
     );
-    res.json({ unlocks: r.rows });
+    res.json({ success: true, unlocks: r.rows });
   } catch (e) {
     console.error("unlocks:", e.message);
-    res.status(401).json({ error: "Nicht autorisiert" });
+    res.status(401).json({ success: false, error: "Nicht autorisiert" });
   }
 });
 
-// ---------- Bestenliste ----------
+// ── BESTENLISTE ──────────────────────────────────────────────────────────────
 
-// Punktestand melden (Gesamtsterne). Authentifiziert über das Pi Access Token,
-// damit niemand fremde Scores manipulieren kann.
+// Punktestand melden (Gesamtsterne). Authentifiziert über das Pi Access Token.
 app.post("/score", async (req, res) => {
   try {
     const { accessToken, stars, nickname } = req.body;
@@ -204,12 +332,12 @@ app.post("/score", async (req, res) => {
 
     const s = parseInt(stars, 10);
     if (!Number.isFinite(s) || s < 0 || s > 1000) {
-      return res.status(400).json({ error: "Ungültiger Punktestand" });
+      return res.status(400).json({ success: false, error: "Ungültiger Punktestand" });
     }
     const nick = sanitizeNickname(nickname);
-    if (!nick) return res.status(400).json({ error: "Ungültiger Spielername" });
+    if (!nick) return res.status(400).json({ success: false, error: "Ungültiger Spielername" });
 
-    // Upsert: Sterne nur erhöhen, nie verringern (Schutz vor Fehl-Meldungen)
+    // Upsert: Sterne nur erhöhen, nie verringern
     await pool.query(
       `INSERT INTO players (uid, nickname, stars, updated_at)
        VALUES ($1,$2,$3,now())
@@ -219,10 +347,10 @@ app.post("/score", async (req, res) => {
              updated_at = now()`,
       [user.uid, nick, s]
     );
-    res.json({ ok: true });
+    res.json({ success: true, ok: true });
   } catch (e) {
     console.error("score:", e.message);
-    res.status(401).json({ error: "Nicht autorisiert" });
+    res.status(401).json({ success: false, error: "Nicht autorisiert" });
   }
 });
 
@@ -232,18 +360,14 @@ app.get("/leaderboard", async (_req, res) => {
     const r = await pool.query(
       `SELECT nickname, stars FROM players ORDER BY stars DESC, updated_at ASC LIMIT 25`
     );
-    res.json({ leaderboard: r.rows });
+    res.json({ success: true, leaderboard: r.rows });
   } catch (e) {
     console.error("leaderboard:", e.message);
-    res.status(500).json({ error: "Bestenliste nicht verfügbar" });
+    res.status(500).json({ success: false, error: "Bestenliste nicht verfügbar" });
   }
 });
 
-// ---------- Start ----------
-app.get("/", (_req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
-
+// ── START ────────────────────────────────────────────────────────────────────
 initDb()
   .then(() => {
     app.listen(PORT, () => console.log(`MatheInnova Backend läuft auf Port ${PORT}`));
