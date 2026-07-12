@@ -729,7 +729,7 @@ o.appendChild(info);
 let busy=false;
 const pb=mkEl("button",{cls:"pay-small-btn",text:amount+" π",click:async()=>{
 if(busy)return; busy=true; pb.textContent="⏳..."; payError=null;
-if(!piUser){try{await piLogin(), 8000);}catch(e){console.error('Login fehlgeschlagen:', e);}}
+if(!piUser){try{await piLogin();}catch(e){console.error('Login fehlgeschlagen:', e);}}
 await piPay(amount,memo,(result)=>{
 if(result.priceType==="all_levels"){
 prog.unlockedStufe2=true;
