@@ -26,6 +26,20 @@ margin-top: 18px; background: rgba(255,255,255,0.14); color: #FEF9C3;
 font-size: 12px; font-weight: 700; padding: 7px 14px; border-radius: 99px;
 border: 1px solid rgba(255,255,255,0.25);
 }
+  .splash-bar-wrap {
+margin-top: 22px; width: 100%; max-width: 300px; height: 8px;
+background: rgba(255,255,255,0.18); border-radius: 99px; overflow: hidden;
+}
+.splash-bar-fill {
+height: 100%; width: 0%;
+background: linear-gradient(90deg, #A5B4FC, #FEF9C3);
+border-radius: 99px;
+animation: splashBarFill 7.2s linear forwards;
+}
+@keyframes splashBarFill {
+from { width: 0%; }
+to { width: 100%; }
+}
 .splash-pi {
 font-size: 48px; margin-bottom: 24px; opacity: 0.85;
 }
@@ -127,6 +141,7 @@ button { cursor: pointer; border: none; font-family: inherit; font-size: 16px; }
 <div class="splash-name">Martin · Montechrist1980</div>
 <div class="splash-message">Zahlen kennen keine Grenzen. Keine Sprache, keinen Glauben, keine Herkunft. Wer rechnet, spricht mit jedem, der je gerechnet hat. Willkommen in einer Sprache, die alle verbindet. Lerne und bewahre.</div>
 <div class="splash-test-badge">🧪 Testversion · Fehler möglich · Rückmeldungen willkommen</div>
+<div class="splash-bar-wrap"><div class="splash-bar-fill"></div></div>
 </div>
 <div id="app"></div>
 <script>
