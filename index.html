@@ -268,16 +268,26 @@ function withTimeout(promise, ms){
 
 function piInit(){
   if(!window.Pi) return Promise.resolve(false);
-  try{
-    if(!piInitialized) piInitialized = Pi.init({ version: "2.0", sandbox: SANDBOX });
-    return Promise.resolve(piInitialized);
-  }catch(e){
-    console.error('Pi.init fehlgeschlagen (vermutlich kein echter Pi Browser):', e);
-    return Promise.resolve(false);
+  if(!piInitialized){
+    try{
+      piInitialized = Promise.resolve(Pi.init({ version: "2.0", sandbox: SANDBOX }))
+        .catch(e => { piInitialized = null; throw e; });
+    }catch(e){
+      console.error('Pi.init fehlgeschlagen:', e);
+      piInitialized = null;
+      return Promise.resolve(false);
+    }
   }
+  return piInitialized;
 }
 
-async function piLogin(){
+let loginInFlight = null;
+function piLogin(){
+  if(loginInFlight) return loginInFlight;
+  loginInFlight = doPiLogin().finally(() => { loginInFlight = null; });
+  return loginInFlight;
+}  
+async function doPiLogin(){
   if(!window.Pi){ piUser={username:"test_nutzer"}; return piUser; }
   await piInit(); // Pi.init vollständig abwarten, bevor authenticate läuft
   return new Promise((res,rej)=>{
@@ -460,7 +470,7 @@ render();
 let busy=false;
 const lb=mkEl("button",{cls:"btn-pi",text:"π Mit Pi einloggen",click:async()=>{
 if(busy)return; busy=true; lb.textContent="Verbinde...";
-try{ await withTimeout(piLogin(), 8000); }catch(e){ console.error('Login fehlgeschlagen:', e); }
+try{ await piLogin(); }catch(e){ console.error('Login fehlgeschlagen:', e); }
 busy=false; render();
 }});
 card.appendChild(lb);
@@ -719,7 +729,7 @@ o.appendChild(info);
 let busy=false;
 const pb=mkEl("button",{cls:"pay-small-btn",text:amount+" π",click:async()=>{
 if(busy)return; busy=true; pb.textContent="⏳..."; payError=null;
-if(!piUser){try{await withTimeout(piLogin(), 8000);}catch(e){console.error('Login fehlgeschlagen:', e);}}
+if(!piUser){try{await piLogin(), 8000);}catch(e){console.error('Login fehlgeschlagen:', e);}}
 await piPay(amount,memo,(result)=>{
 if(result.priceType==="all_levels"){
 prog.unlockedStufe2=true;
