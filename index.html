@@ -464,7 +464,7 @@ pills.appendChild(mkEl("span",{cls:"pill",text:t}));
 });
 card.appendChild(pills);
 // Pi-Hinweis nur außerhalb des Pi Browsers
-if(typeof window.Pi === "undefined"){
+if(!/PiBrowser/i.test(navigator.userAgent)){
 const piBox=mkEl("div",{style:{background:"#F5F3FF",border:"2px solid #7C3AED",borderRadius:"16px",padding:"14px"}});
 piBox.appendChild(mkEl("div",{text:"💜 Premium-Level werden mit Pi bezahlt",style:{fontWeight:"800",color:"#5B21B6",fontSize:"14px",marginBottom:"6px"}}));
 piBox.appendChild(mkEl("div",{text:"MatheInnova nutzt Pi Network für Zahlungen – eine digitale Währung mit über 55 Millionen Mitgliedern. Die Anmeldung ist kostenlos.",style:{fontSize:"13px",color:"#475569",lineHeight:"1.5",marginBottom:"10px"}}));
@@ -778,7 +778,7 @@ card.appendChild(payOption("1 Level freischalten","Flexibel · zahle pro Level",
 card.appendChild(payOption("⭐ Alle Level freischalten","45 Level · spare ca. 38%",14,"MatheInnova Stufe 2 komplett",true));
 
 if(payError) card.appendChild(mkEl("p",{text:"😅 "+payError,style:{textAlign:"center",fontSize:"13px",color:"#991B1B",fontWeight:"700",background:"#FEE2E2",padding:"10px",borderRadius:"12px"}}));
-if(typeof window.Pi === "undefined"){
+if(!/PiBrowser/i.test(navigator.userAgent)){
 const payHint=mkEl("p",{style:{textAlign:"center",fontSize:"13px",color:"#5B21B6",fontWeight:"600",background:"#F5F3FF",padding:"10px",borderRadius:"12px",lineHeight:"1.5"}});
 payHint.innerHTML='Noch kein Pi Network? <a href="https://minepi.com/Montecrist" target="_blank" rel="noopener" style="color:#7C3AED;font-weight:800;">Hier kostenlos starten</a> (Code: Montecrist) und die App danach im Pi Browser öffnen.';
 card.appendChild(payHint);
