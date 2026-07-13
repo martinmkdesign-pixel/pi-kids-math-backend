@@ -463,7 +463,21 @@ const pills=mkEl("div",{cls:"pills"});
 pills.appendChild(mkEl("span",{cls:"pill",text:t}));
 });
 card.appendChild(pills);
-
+// Pi-Hinweis nur außerhalb des Pi Browsers
+if(typeof window.Pi === "undefined"){
+const piBox=mkEl("div",{style:{background:"#F5F3FF",border:"2px solid #7C3AED",borderRadius:"16px",padding:"14px"}});
+piBox.appendChild(mkEl("div",{text:"💜 Premium-Level werden mit Pi bezahlt",style:{fontWeight:"800",color:"#5B21B6",fontSize:"14px",marginBottom:"6px"}}));
+piBox.appendChild(mkEl("div",{text:"MatheInnova nutzt Pi Network für Zahlungen – eine digitale Währung mit über 55 Millionen Mitgliedern. Die Anmeldung ist kostenlos.",style:{fontSize:"13px",color:"#475569",lineHeight:"1.5",marginBottom:"10px"}}));
+const piLink=document.createElement("a");
+piLink.textContent="Jetzt bei Pi Network starten →";
+piLink.href="https://minepi.com/Montecrist";
+piLink.target="_blank";
+piLink.rel="noopener";
+Object.assign(piLink.style,{display:"inline-block",background:"#7C3AED",color:"#fff",padding:"9px 14px",borderRadius:"10px",textDecoration:"none",fontWeight:"800",fontSize:"13px"});
+piBox.appendChild(piLink);
+piBox.appendChild(mkEl("div",{text:"Einladungscode: Montecrist · Öffne MatheInnova danach im Pi Browser.",style:{fontSize:"11px",color:"#94A3B8",marginTop:"8px"}}));
+card.appendChild(piBox);
+}
 if(piUser){
 const ub=mkEl("div",{cls:"user-badge"});
 ub.appendChild(mkEl("span",{text:"π"}));
@@ -764,6 +778,11 @@ card.appendChild(payOption("1 Level freischalten","Flexibel · zahle pro Level",
 card.appendChild(payOption("⭐ Alle Level freischalten","45 Level · spare ca. 38%",14,"MatheInnova Stufe 2 komplett",true));
 
 if(payError) card.appendChild(mkEl("p",{text:"😅 "+payError,style:{textAlign:"center",fontSize:"13px",color:"#991B1B",fontWeight:"700",background:"#FEE2E2",padding:"10px",borderRadius:"12px"}}));
+if(typeof window.Pi === "undefined"){
+const payHint=mkEl("p",{style:{textAlign:"center",fontSize:"13px",color:"#5B21B6",fontWeight:"600",background:"#F5F3FF",padding:"10px",borderRadius:"12px",lineHeight:"1.5"}});
+payHint.innerHTML='Noch kein Pi Network? <a href="https://minepi.com/Montecrist" target="_blank" rel="noopener" style="color:#7C3AED;font-weight:800;">Hier kostenlos starten</a> (Code: Montecrist) und die App danach im Pi Browser öffnen.';
+card.appendChild(payHint);
+}
 if(!piUser) card.appendChild(mkEl("p",{text:"⚠️ Bitte zuerst mit Pi einloggen",style:{textAlign:"center",fontSize:"13px",color:"#F59E0B",fontWeight:"700"}}));
 card.appendChild(mkBtn("← Zurück","btn-back",()=>{payError=null;screen="map";render();}));
 app.appendChild(card);
