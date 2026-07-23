@@ -217,7 +217,35 @@ Es findet keine Weitergabe an Werbetreibende statt, außer der notwendigen Über
 Nutzer bzw. deren Erziehungsberechtigte haben das Recht auf Auskunft, Löschung und Widerspruch.
 
 10. Kinder und Datenschutz
-Wir erheben wissentlich keine personenbezogenen Daten direkt von Kindern ohne Einbindung eines Erziehungsberechtigten.`;
+Wir erheben wissentlich keine personenbezogenen Daten direkt von Kindern ohne Einbindung eines Erziehungsberechtigten.
+
+11. Bestenliste
+Die Teilnahme an der Bestenliste ist freiwillig. Dafür werden ein frei gewählter Spitzname und die Anzahl der erreichten Sterne gespeichert und für andere Nutzer sichtbar angezeigt. Bitte verwende keinen echten Namen und keine Angaben, die Rückschlüsse auf die Identität zulassen. Der Pi-Benutzername wird in der Bestenliste nicht angezeigt. Die Teilnahme kann jederzeit beendet werden; eine Löschung des Eintrags kann über die oben genannte E-Mail-Adresse angefordert werden.`;
+
+const IMPRINT_TEXT = `IMPRESSUM
+
+Angaben gemäß § 5 DDG
+
+Martin Keßlinger
+[Straße und Hausnummer]
+[PLZ] Itzehoe
+Deutschland
+
+Kontakt
+E-Mail: martin.kesslinger@outlook.de
+
+Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV
+Martin Keßlinger, Anschrift wie oben
+
+Hinweis zur Streitbeilegung
+Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung bereit: https://ec.europa.eu/consumers/odr
+Ich bin nicht verpflichtet und nicht bereit, an einem Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.
+
+Haftung für Inhalte
+Als Diensteanbieter bin ich für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich. Ich bin jedoch nicht verpflichtet, übermittelte oder gespeicherte fremde Informationen zu überwachen oder nach Umständen zu forschen, die auf eine rechtswidrige Tätigkeit hinweisen.
+
+Haftung für Links
+Diese App enthält Links zu externen Websites Dritter, auf deren Inhalte ich keinen Einfluss habe. Für die Inhalte der verlinkten Seiten ist stets der jeweilige Anbieter verantwortlich.`;
 
 const EMOJI_SETS = [
 ["🍎","🍓","🍊","🍋","🍇","🍒","🥝"],
@@ -261,8 +289,16 @@ return{a,b,op,ans,emoji,choices:[ans,w1,w2].sort(()=>Math.random()-.5)};
 let prog=(()=>{try{return JSON.parse(localStorage.getItem("pkm4")||"{}");}catch{return{};}})();
 function saveProg(){try{localStorage.setItem("pkm4",JSON.stringify(prog));}catch{}}
 
+// Spitzname für die Bestenliste (bewusst NICHT der Pi-Username – Kinderdatenschutz)
+function getNickname(){try{return localStorage.getItem("pkm4_nick")||"";}catch{return "";}}
+function setNickname(n){try{localStorage.setItem("pkm4_nick",n);}catch{}}
+
+// Sterne = Anzahl abgeschlossener Level
+function totalStars(){return (prog.completedLevels||[]).length;}
+
 // ── PI SDK ────────────────────────────────────────────────────────────────────
 let piUser=null;
+let piAccessToken=null;   // wird für /unlocks und /score gebraucht
 let piInitialized = null;
 
 function withTimeout(promise, ms){
@@ -320,7 +356,10 @@ async function doPiLogin(){
         const verifyData = await verifyRes.json();
         if(verifyData.success){
           piUser = a.user;
+          piAccessToken = a.accessToken;
           hideSplash();
+          // Gekaufte Freischaltungen vom Server nachladen (geräteunabhängig)
+          syncUnlocksFromServer().catch(e=>console.error('Freischaltungen laden:', e));
           res(piUser);
         } else {
           console.error('Token-Validierung fehlgeschlagen:', verifyData);
@@ -366,10 +405,97 @@ console.error('Synchroner Fehler bei createPayment:', syncErr);
 if(onFail)onFail("Die Zahlung konnte nicht gestartet werden. Bitte versuch's später noch einmal.");
 }
 }
+
+// ── SERVER-ABGLEICH: FREISCHALTUNGEN ─────────────────────────────────────────
+// Holt gekaufte Inhalte aus der Datenbank. So bleiben Käufe auch nach
+// Gerätewechsel oder gelöschtem Browser-Speicher erhalten.
+async function syncUnlocksFromServer(){
+  if(!piAccessToken) return false;
+  try{
+    const res = await fetch(BACKEND_URL+'/unlocks', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ accessToken: piAccessToken })
+    });
+    const data = await res.json();
+    if(!data.success || !Array.isArray(data.unlocks)) return false;
+
+    const hasAll = data.unlocks.some(u => u.product === "all");
+    const levelCount = data.unlocks.filter(u => u.product === "level").length;
+    let changed = false;
+
+    if(hasAll && !prog.unlockedStufe2){
+      prog.unlockedStufe2 = true;
+      changed = true;
+    }
+
+    if(!hasAll && levelCount > 0){
+      // Die ersten N kostenpflichtigen Level der Stufe 2 freischalten
+      const payable = LEVELS.filter(l => l.stufe === 2 && !l.free).map(l => l.id);
+      const fromServer = payable.slice(0, levelCount);
+      const local = prog.singleUnlockedLevels || [];
+      const merged = Array.from(new Set([...local, ...fromServer])).sort((a,b)=>a-b);
+      if(merged.length !== local.length){
+        prog.singleUnlockedLevels = merged;
+        changed = true;
+      }
+    }
+
+    if(changed){ saveProg(); if(screen==="map"||screen==="home") render(); }
+    return true;
+  }catch(e){
+    console.error('syncUnlocksFromServer:', e);
+    return false;
+  }
+}
+
+// ── BESTENLISTE ──────────────────────────────────────────────────────────────
+let leaderboard=null;        // null = noch nicht geladen
+let leaderboardError=null;
+let scoreSending=false;
+
+// Punktestand melden. Läuft still im Hintergrund; Fehler stören das Spiel nicht.
+async function submitScore(){
+  const nick = getNickname();
+  if(!piAccessToken || !nick || scoreSending) return;
+  scoreSending = true;
+  try{
+    await fetch(BACKEND_URL+'/score', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ accessToken: piAccessToken, stars: totalStars(), nickname: nick })
+    });
+  }catch(e){
+    console.error('submitScore:', e);
+  }finally{
+    scoreSending = false;
+  }
+}
+
+async function loadLeaderboard(){
+  leaderboardError = null;
+  try{
+    const res = await fetch(BACKEND_URL+'/leaderboard');
+    const data = await res.json();
+    if(data.success && Array.isArray(data.leaderboard)){
+      leaderboard = data.leaderboard;
+    } else {
+      leaderboard = [];
+      leaderboardError = "Die Bestenliste ist gerade nicht erreichbar.";
+    }
+  }catch(e){
+    console.error('loadLeaderboard:', e);
+    leaderboard = [];
+    leaderboardError = "Die Bestenliste ist gerade nicht erreichbar.";
+  }
+  if(screen==="board") render();
+}
+
 // ── STATE ─────────────────────────────────────────────────────────────────────
 let screen="home",curLevel=null,curQ=null,qNum=0,hits=0,sel=null,fb=null,bouncing=false;
 let answerLocked=false;
 let payError=null;
+let docReturnScreen="consent";   // wohin "Zurück" auf Terms/Datenschutz/Impressum führt
 
 // ── HELPER ────────────────────────────────────────────────────────────────────
 const app=document.getElementById("app");
@@ -410,7 +536,7 @@ w.appendChild(f); return w;
 
 function render(){
 app.innerHTML="";
-({home:renderHome,map:renderMap,game:renderGame,done:renderDone,pay:renderPay,yay:renderYay,consent:renderConsent,terms:renderTerms,privacy:renderPrivacy}[screen]||renderHome)();
+({home:renderHome,map:renderMap,game:renderGame,done:renderDone,pay:renderPay,yay:renderYay,consent:renderConsent,terms:renderTerms,privacy:renderPrivacy,board:renderBoard,imprint:renderImprint}[screen]||renderHome)();
 }
 
 function renderConsent(){
@@ -421,8 +547,8 @@ box.appendChild(mkEl("div",{cls:"consent-title",text:"Bevor es losgeht"}));
 box.appendChild(mkEl("div",{cls:"consent-text",text:"MatheInnova ist ein Lernspiel für Kinder. Einige Level können optional mit Pi (aktuell Test-Pi, kein echtes Geld) freigeschaltet werden. Diese Bestätigung muss von einem Erwachsenen / Erziehungsberechtigten vorgenommen werden - nicht vom Kind selbst. Die App befindet sich aktuell in einer aktiven Testphase. Trotz sorgfältiger Entwicklung kann ein fehlerfreier Betrieb nicht garantiert werden - gelegentliche Bugs sind in diesem Stadium möglich. Über Hinweise dazu freue ich mich sehr (Kontakt siehe Nutzungsbedingungen)."}));
 
 const links=mkEl("div",{cls:"consent-links"});
-links.appendChild(mkEl("button",{cls:"consent-link-btn",text:"📜 Nutzungsbedingungen",click:()=>{screen="terms";render();}}));
-links.appendChild(mkEl("button",{cls:"consent-link-btn",text:"🔒 Datenschutz",click:()=>{screen="privacy";render();}}));
+links.appendChild(mkEl("button",{cls:"consent-link-btn",text:"📜 Nutzungsbedingungen",click:()=>{docReturnScreen="consent";screen="terms";render();}}));
+links.appendChild(mkEl("button",{cls:"consent-link-btn",text:"🔒 Datenschutz",click:()=>{docReturnScreen="consent";screen="privacy";render();}}));
 box.appendChild(links);
 
 const checkRow=mkEl("div",{cls:"consent-check-row"});
@@ -455,12 +581,15 @@ function renderDocScreen(title, text){
 const card=mkEl("div",{cls:"card doc-screen"});
 card.appendChild(mkEl("div",{cls:"doc-title",text:title}));
 card.appendChild(mkEl("div",{cls:"doc-body",text:text}));
-card.appendChild(mkBtn("← Zurück","btn-back",()=>{screen="consent";render();}));
+// Vor der Zustimmung zurück zum Consent-Dialog, danach zur Startseite
+const back = docReturnScreen;
+card.appendChild(mkBtn("← Zurück","btn-back",()=>{screen=back;render();}));
 app.appendChild(card);
 }
 
 function renderTerms(){ renderDocScreen("📜 Nutzungsbedingungen", TERMS_TEXT); }
 function renderPrivacy(){ renderDocScreen("🔒 Datenschutzerklärung", PRIVACY_TEXT); }
+function renderImprint(){ renderDocScreen("ℹ️ Impressum", IMPRINT_TEXT); }
 
 // ── HOME ──────────────────────────────────────────────────────────────────────
 function renderHome(){
@@ -497,6 +626,7 @@ ub.appendChild(mkEl("span",{text:piUser.username}));
 card.appendChild(ub);
 card.appendChild(mkBtn("Abmelden","btn-back",()=>{
 piUser=null;
+piAccessToken=null;
 render();
 }));
 } else {
@@ -510,7 +640,14 @@ card.appendChild(lb);
 }
 
 card.appendChild(mkBtn("▶ Spielen","btn-green",()=>{screen="map";render();}));
+card.appendChild(mkBtn("🏅 Bestenliste","btn-purple",()=>{screen="board";leaderboard=null;render();loadLeaderboard();}));
 card.appendChild(mkEl("p",{cls:"sub",text:"Eltern melden sich an · Kinder spielen",style:{fontSize:"12px",color:"#94A3B8"}}));
+
+const footer=mkEl("div",{style:{display:"flex",gap:"6px",justifyContent:"center",flexWrap:"wrap",marginTop:"4px"}});
+footer.appendChild(mkEl("button",{cls:"btn-back",text:"Impressum",style:{fontSize:"12px",minHeight:"32px"},click:()=>{docReturnScreen="home";screen="imprint";render();}}));
+footer.appendChild(mkEl("button",{cls:"btn-back",text:"Nutzungsbedingungen",style:{fontSize:"12px",minHeight:"32px"},click:()=>{docReturnScreen="home";screen="terms";render();}}));
+footer.appendChild(mkEl("button",{cls:"btn-back",text:"Datenschutz",style:{fontSize:"12px",minHeight:"32px"},click:()=>{docReturnScreen="home";screen="privacy";render();}}));
+card.appendChild(footer);
 app.appendChild(card);
 }
 
@@ -523,7 +660,7 @@ const unlock=prog.unlockedStufe2||false;
 const hdr=mkEl("div",{cls:"map-header"});
 hdr.appendChild(mkBtn("← Home","btn-back",()=>{screen="home";render();}));
 hdr.appendChild(mkEl("span",{html:"<b style='color:#4F46E5;font-size:17px'>π MatheInnova</b>"}));
-hdr.appendChild(mkEl("span",{text:"⭐ "+Math.min(5,Math.floor(done.length/4))+"/5",style:{fontSize:"13px",fontWeight:"700",color:"#6366F1"}}));
+hdr.appendChild(mkEl("button",{cls:"btn-back",text:"⭐ "+done.length+" 🏅",style:{fontSize:"13px",fontWeight:"700",color:"#6366F1",minWidth:"auto"},click:()=>{screen="board";leaderboard=null;render();loadLeaderboard();}}));
 app.appendChild(hdr);
 
 // Stufe 1
@@ -704,8 +841,13 @@ if(nxt>=Q_PER_LVL){
 const passed=hits>=Math.ceil(Q_PER_LVL*0.6);
 if(passed){
 const cl=prog.completedLevels||[];
-if(!cl.includes(curLevel.id))prog.completedLevels=[...cl,curLevel.id];
+if(!cl.includes(curLevel.id)){
+prog.completedLevels=[...cl,curLevel.id];
 saveProg();
+submitScore(); // still im Hintergrund, stört das Spiel nicht
+} else {
+saveProg();
+}
 }
 screen="done"; render(); return;
 }
@@ -805,8 +947,84 @@ function renderYay(){
 const card=mkEl("div",{cls:"card"});
 card.appendChild(mkEl("div",{text:"🎊",style:{fontSize:"68px",textAlign:"center"}}));
 card.appendChild(mkEl("h1",{text:"Freigeschaltet!",style:{fontSize:"24px"}}));
-card.appendChild(mkEl("p",{cls:"sub",text:"Stufe 2 ist jetzt komplett verfügbar. Viel Spaß!"}));
+card.appendChild(mkEl("p",{cls:"sub",text: prog.unlockedStufe2
+  ? "Stufe 2 ist jetzt komplett verfügbar. Viel Spaß!"
+  : "Das nächste Level ist jetzt freigeschaltet. Viel Spaß!"}));
 card.appendChild(mkBtn("▶ Zur Levelkarte","btn-green",()=>{screen="map";render();}));
+app.appendChild(card);
+}
+
+// ── BESTENLISTE ──────────────────────────────────────────────────────────────
+function renderBoard(){
+const card=mkEl("div",{cls:"card"});
+
+const top=mkEl("div",{cls:"game-top"});
+top.appendChild(mkBtn("← Zurück","btn-back",()=>{screen="home";render();}));
+top.appendChild(mkEl("span",{text:"🏅 Bestenliste",style:{fontWeight:"800",color:"#4F46E5",fontSize:"17px"}}));
+top.appendChild(mkEl("span",{text:" ",style:{minWidth:"60px"}}));
+card.appendChild(top);
+
+// Eigener Stand
+const me=mkEl("div",{cls:"user-badge"});
+me.appendChild(mkEl("span",{text:"⭐"}));
+me.appendChild(mkEl("span",{text:"Deine Sterne: "+totalStars()+" / "+LEVELS.length}));
+card.appendChild(me);
+
+const nick=getNickname();
+
+if(!piUser){
+card.appendChild(mkEl("p",{text:"Melde dich mit Pi an, um in der Bestenliste mitzumachen.",style:{textAlign:"center",fontSize:"14px",color:"#64748B",lineHeight:"1.5"}}));
+} else if(!nick){
+// Spitzname erfassen
+const box=mkEl("div",{style:{background:"#F5F3FF",border:"2px solid #7C3AED",borderRadius:"16px",padding:"14px"}});
+box.appendChild(mkEl("div",{text:"Spitznamen wählen",style:{fontWeight:"800",color:"#5B21B6",fontSize:"15px",marginBottom:"6px"}}));
+box.appendChild(mkEl("div",{text:"Dieser Name ist für alle sichtbar. Bitte keinen echten Namen verwenden — such dir einen Fantasienamen aus!",style:{fontSize:"13px",color:"#475569",lineHeight:"1.5",marginBottom:"10px"}}));
+const inp=document.createElement("input");
+inp.type="text"; inp.maxLength=30; inp.placeholder="z. B. Rechenfuchs";
+Object.assign(inp.style,{width:"100%",padding:"11px",borderRadius:"12px",border:"2px solid #C4B5FD",fontSize:"15px",fontFamily:"inherit",marginBottom:"10px"});
+box.appendChild(inp);
+const hint=mkEl("div",{text:" ",style:{fontSize:"12px",color:"#991B1B",fontWeight:"700",minHeight:"16px",marginBottom:"6px"}});
+box.appendChild(hint);
+box.appendChild(mkBtn("✓ Speichern und mitmachen","btn-purple",async()=>{
+const v=(inp.value||"").replace(/[^a-zA-Z0-9äöüÄÖÜß \-]/g,"").trim();
+if(v.length<3){ hint.textContent="Bitte mindestens 3 Zeichen (Buchstaben, Zahlen, Leerzeichen)."; return; }
+setNickname(v.slice(0,30));
+await submitScore();
+leaderboard=null; render(); loadLeaderboard();
+}));
+card.appendChild(box);
+} else {
+const row=mkEl("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",flexWrap:"wrap"}});
+row.appendChild(mkEl("span",{text:"Dein Name: "+nick,style:{fontSize:"13px",color:"#64748B",fontWeight:"600"}}));
+row.appendChild(mkEl("button",{cls:"btn-back",text:"ändern",style:{fontSize:"12px",minHeight:"30px",minWidth:"auto"},click:()=>{setNickname("");render();}}));
+card.appendChild(row);
+}
+
+// Liste
+if(leaderboard===null){
+card.appendChild(mkEl("p",{text:"⏳ Wird geladen …",style:{textAlign:"center",fontSize:"15px",color:"#94A3B8",padding:"16px"}}));
+} else if(leaderboardError){
+card.appendChild(mkEl("p",{text:"😅 "+leaderboardError,style:{textAlign:"center",fontSize:"13px",color:"#991B1B",fontWeight:"700",background:"#FEE2E2",padding:"10px",borderRadius:"12px"}}));
+} else if(leaderboard.length===0){
+card.appendChild(mkEl("p",{text:"Noch keine Einträge. Sei der Erste!",style:{textAlign:"center",fontSize:"14px",color:"#64748B",padding:"16px"}}));
+} else {
+const list=mkEl("div",{style:{display:"flex",flexDirection:"column",gap:"6px"}});
+leaderboard.forEach((e,i)=>{
+const isMe = nick && e.nickname===nick;
+const r=mkEl("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"10px 12px",borderRadius:"12px",
+background: isMe ? "#EEF2FF" : (i<3 ? "#FEF9C3" : "#F8FAFC"),
+border: isMe ? "2px solid #6366F1" : "2px solid transparent"}});
+const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":String(i+1)+".";
+r.appendChild(mkEl("span",{text:medal,style:{fontSize:"16px",fontWeight:"800",minWidth:"30px",textAlign:"center"}}));
+r.appendChild(mkEl("span",{text:e.nickname,style:{flex:"1",fontWeight:"700",fontSize:"14px",color:"#1E1B4B",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}));
+r.appendChild(mkEl("span",{text:"⭐ "+e.stars,style:{fontWeight:"800",fontSize:"14px",color:"#6366F1",whiteSpace:"nowrap"}}));
+list.appendChild(r);
+});
+card.appendChild(list);
+}
+
+card.appendChild(mkBtn("🔄 Aktualisieren","btn-back",()=>{leaderboard=null;render();loadLeaderboard();}));
+card.appendChild(mkEl("p",{text:"Es werden nur Spitzname und Sterne angezeigt — keine Pi-Benutzernamen.",style:{textAlign:"center",fontSize:"11px",color:"#94A3B8",lineHeight:"1.5"}}));
 app.appendChild(card);
 }
 
@@ -822,6 +1040,7 @@ render(); // App sofort anzeigen – unabhängig davon, ob/wie lange Pi im Hinte
     if(window.Pi && hasConsent){
       await withTimeout(piLogin(), 8000);
       render(); // nur erneut rendern, wenn der Login tatsächlich geklappt hat
+      if(getNickname()) submitScore(); // Punktestand still abgleichen
     }
   }catch(e){
     console.log('Pi-Initialisierung/Auto-Login nicht möglich (z.B. kein echter Pi Browser, oder Zeitüberschreitung):', e);
